@@ -15,12 +15,14 @@ import { MathLib, WAD } from "./libraries/MathLib.sol";
 import { SharesMathLib } from "./libraries/SharesMathLib.sol";
 import { MarketParamsLib } from "./libraries/MarketParamsLib.sol";
 import { SafeTransferLib } from "./libraries/SafeTransferLib.sol";
+import { AccessControlUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
+import { UUPSUpgradeable } from "../../lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title Morpho
 /// @author Morpho Labs
 /// @custom:contact security@morpho.org
 /// @notice The Morpho contract.
-contract Morpho is IMorphoStaticTyping {
+contract Morpho is UUPSUpgradeable, AccessControlUpgradeable, IMorphoStaticTyping {
   using MathLib for uint128;
   using MathLib for uint256;
   using UtilsLib for uint256;
@@ -31,7 +33,7 @@ contract Morpho is IMorphoStaticTyping {
   /* IMMUTABLES */
 
   /// @inheritdoc IMorphoBase
-  bytes32 public immutable DOMAIN_SEPARATOR;
+  bytes32 public DOMAIN_SEPARATOR;
 
   /* STORAGE */
 
@@ -54,19 +56,45 @@ contract Morpho is IMorphoStaticTyping {
   /// @inheritdoc IMorphoStaticTyping
   mapping(Id => MarketParams) public idToMarketParams;
 
+  bytes32 public constant MANAGER = keccak256("MANAGER"); // manager role
+
   /* CONSTRUCTOR */
 
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  constructor() {
+    _disableInitializers();
+  }
+
   /// @param newOwner The new owner of the contract.
-  constructor(address newOwner) {
+  function initialize(address admin, address manager, address newOwner) public initializer {
+    require(admin != address(0), ErrorsLib.ZERO_ADDRESS);
+    require(manager != address(0), ErrorsLib.ZERO_ADDRESS);
     require(newOwner != address(0), ErrorsLib.ZERO_ADDRESS);
 
+    __AccessControl_init();
+
     DOMAIN_SEPARATOR = keccak256(abi.encode(DOMAIN_TYPEHASH, block.chainid, address(this)));
+
     owner = newOwner;
+    _grantRole(DEFAULT_ADMIN_ROLE, admin);
+    _grantRole(MANAGER, manager);
 
     emit EventsLib.SetOwner(newOwner);
   }
 
   /* MODIFIERS */
+
+  /// @dev Reverts if the caller is not the manager.
+  modifier onlyManager() {
+    require(hasRole(MANAGER, msg.sender), ErrorsLib.NOT_MANAGER);
+    _;
+  }
+
+  /// @dev Reverts if the caller is not the admin.
+  modifier onlyAdmin() {
+    require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), ErrorsLib.NOT_ADMIN);
+    _;
+  }
 
   /// @dev Reverts if the caller is not the owner.
   modifier onlyOwner() {
@@ -560,4 +588,6 @@ contract Morpho is IMorphoStaticTyping {
       }
     }
   }
+
+  function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 }

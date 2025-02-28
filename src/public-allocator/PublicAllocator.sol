@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity 0.8.24;
 
+import { AccessControlUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
+import { UUPSUpgradeable } from "../../lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { FlowCaps, FlowCapsConfig, Withdrawal, MAX_SETTABLE_FLOW_CAP, IPublicAllocatorStaticTyping, IPublicAllocatorBase } from "./interfaces/IPublicAllocator.sol";
 import { Id, IMorpho, IMetaMorpho, MarketAllocation, MarketParams } from "../metamorpho/interfaces/IMetaMorpho.sol";
 import { Market } from "../morpho/interfaces/IMorpho.sol";
@@ -15,7 +17,7 @@ import { MorphoBalancesLib } from "../morpho/libraries/periphery/MorphoBalancesL
 /// @author Morpho Labs
 /// @custom:contact security@morpho.org
 /// @notice Publicly callable allocator for MetaMorpho vaults.
-contract PublicAllocator is IPublicAllocatorStaticTyping {
+contract PublicAllocator is UUPSUpgradeable, AccessControlUpgradeable, IPublicAllocatorStaticTyping {
   using MorphoBalancesLib for IMorpho;
   using MarketParamsLib for MarketParams;
   using UtilsLib for uint256;
@@ -23,7 +25,7 @@ contract PublicAllocator is IPublicAllocatorStaticTyping {
   /* CONSTANTS */
 
   /// @inheritdoc IPublicAllocatorBase
-  IMorpho public immutable MORPHO;
+  IMorpho public MORPHO;
 
   /* STORAGE */
 
@@ -36,6 +38,8 @@ contract PublicAllocator is IPublicAllocatorStaticTyping {
   /// @inheritdoc IPublicAllocatorStaticTyping
   mapping(address => mapping(Id => FlowCaps)) public flowCaps;
 
+  bytes32 public constant MANAGER = keccak256("MANAGER"); // manager role
+
   /* MODIFIER */
 
   /// @dev Reverts if the caller is not the admin nor the owner of this vault.
@@ -46,11 +50,30 @@ contract PublicAllocator is IPublicAllocatorStaticTyping {
     _;
   }
 
+  /// @dev Reverts if the caller is not the superAdmin.
+  modifier onlySuperAdmin() {
+    require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), ErrorsLib.NOT_ADMIN);
+    _;
+  }
+
   /* CONSTRUCTOR */
 
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  constructor() {
+    _disableInitializers();
+  }
+
   /// @dev Initializes the contract.
-  constructor(address morpho) {
-    MORPHO = IMorpho(morpho);
+  function initialize(address _admin, address _manager, address _morpho) public initializer {
+    require(_admin != address(0), ErrorsLib.ZERO_ADDRESS);
+    require(_manager != address(0), ErrorsLib.ZERO_ADDRESS);
+    require(_morpho != address(0), ErrorsLib.ZERO_ADDRESS);
+
+    __AccessControl_init();
+
+    MORPHO = IMorpho(_morpho);
+    _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+    _grantRole(MANAGER, _manager);
   }
 
   /* ADMIN OR VAULT OWNER ONLY */
@@ -151,4 +174,6 @@ contract PublicAllocator is IPublicAllocatorStaticTyping {
 
     emit EventsLib.PublicReallocateTo(msg.sender, vault, supplyMarketId, totalWithdrawn);
   }
+
+  function _authorizeUpgrade(address newImplementation) internal override onlySuperAdmin {}
 }

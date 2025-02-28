@@ -17,16 +17,26 @@ import { MarketParamsLib } from "../morpho/libraries/MarketParamsLib.sol";
 import { IERC20Metadata } from "../../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { MorphoBalancesLib } from "../morpho/libraries/periphery/MorphoBalancesLib.sol";
 
-import { Multicall } from "../../lib/openzeppelin-contracts/contracts/utils/Multicall.sol";
-import { Ownable2Step, Ownable } from "../../lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol";
-import { ERC20Permit } from "../../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import { IERC20, IERC4626, ERC20, ERC4626, Math, SafeERC20 } from "../../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC4626.sol";
+import { MulticallUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/utils/MulticallUpgradeable.sol";
+import { Ownable2StepUpgradeable, OwnableUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
+import { ERC20PermitUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import { IERC20, IERC4626, ERC20Upgradeable, ERC4626Upgradeable, Math, SafeERC20 } from "../../lib/openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import { AccessControlUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
+import { UUPSUpgradeable } from "../../lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title MetaMorpho
 /// @author Morpho Labs
 /// @custom:contact security@morpho.org
 /// @notice ERC4626 compliant vault allowing users to deposit assets to Morpho.
-contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorphoStaticTyping {
+contract MetaMorpho is
+  UUPSUpgradeable,
+  AccessControlUpgradeable,
+  ERC4626Upgradeable,
+  ERC20PermitUpgradeable,
+  Ownable2StepUpgradeable,
+  MulticallUpgradeable,
+  IMetaMorphoStaticTyping
+{
   using Math for uint256;
   using UtilsLib for uint256;
   using SafeCast for uint256;
@@ -42,12 +52,12 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
   /* IMMUTABLES */
 
   /// @inheritdoc IMetaMorphoBase
-  IMorpho public immutable MORPHO;
+  IMorpho public MORPHO;
 
   /// @notice OpenZeppelin decimals offset used by the ERC4626 implementation.
   /// @dev Calculated to be max(0, 18 - underlyingDecimals) at construction, so the initial conversion rate maximizes
   /// precision between shares and assets.
-  uint8 public immutable DECIMALS_OFFSET;
+  uint8 public DECIMALS_OFFSET;
 
   /* STORAGE */
 
@@ -93,7 +103,14 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
   /// @inheritdoc IMetaMorphoBase
   uint256 public lastTotalAssets;
 
+  bytes32 public constant MANAGER = keccak256("MANAGER"); // manager role
+
   /* CONSTRUCTOR */
+
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  constructor() {
+    _disableInitializers();
+  }
 
   /// @dev Initializes the contract.
   /// @param owner The owner of the contract.
@@ -102,17 +119,29 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
   /// @param _asset The address of the underlying asset.
   /// @param _name The name of the vault.
   /// @param _symbol The symbol of the vault.
-  constructor(
+  function initalize(
     address owner,
+    address admin,
+    address manager,
     address morpho,
     uint256 initialTimelock,
     address _asset,
     string memory _name,
     string memory _symbol
-  ) ERC4626(IERC20(_asset)) ERC20Permit(_name) ERC20(_name, _symbol) Ownable(owner) {
+  ) public initializer {
     if (morpho == address(0)) revert ErrorsLib.ZeroAddress();
+    if (admin == address(0)) revert ErrorsLib.ZeroAddress();
+    if (manager == address(0)) revert ErrorsLib.ZeroAddress();
+
+    __ERC4626_init(IERC20(_asset));
+    __ERC20_init(_name, _symbol);
+    __Ownable_init(owner);
+    __AccessControl_init();
 
     MORPHO = IMorpho(morpho);
+    _grantRole(DEFAULT_ADMIN_ROLE, admin);
+    _grantRole(MANAGER, manager);
+
     DECIMALS_OFFSET = uint8(uint256(18).zeroFloorSub(IERC20Metadata(_asset).decimals()));
 
     _checkTimelockBounds(initialTimelock);
@@ -122,6 +151,12 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
   }
 
   /* MODIFIERS */
+
+  /// @dev Reverts if the caller is not the admin.
+  modifier onlyAdmin() {
+    require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), ErrorsLib.NOT_ADMIN);
+    _;
+  }
 
   /// @dev Reverts if the caller doesn't have the curator role.
   modifier onlyCuratorRole() {
@@ -477,11 +512,10 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
     emit EventsLib.Skim(_msgSender(), token, amount);
   }
 
-  /* ERC4626 (PUBLIC) */
+  /* ERC4626Upgradeable (PUBLIC) */
 
-  /// @inheritdoc IERC20Metadata
-  function decimals() public view override(ERC20, ERC4626) returns (uint8) {
-    return ERC4626.decimals();
+  function decimals() public view override(ERC20Upgradeable, ERC4626Upgradeable) returns (uint8) {
+    return ERC4626Upgradeable.decimals();
   }
 
   /// @inheritdoc IERC4626
@@ -575,9 +609,9 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
     }
   }
 
-  /* ERC4626 (INTERNAL) */
+  /* ERC4626Upgradeable (INTERNAL) */
 
-  /// @inheritdoc ERC4626
+  /// @inheritdoc ERC4626Upgradeable
   function _decimalsOffset() internal view override returns (uint8) {
     return DECIMALS_OFFSET;
   }
@@ -612,7 +646,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
     }
   }
 
-  /// @inheritdoc ERC4626
+  /// @inheritdoc ERC4626Upgradeable
   /// @dev The accrual of performance fees is taken into account in the conversion.
   function _convertToShares(uint256 assets, Math.Rounding rounding) internal view override returns (uint256) {
     (uint256 feeShares, uint256 newTotalAssets) = _accruedFeeShares();
@@ -620,7 +654,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
     return _convertToSharesWithTotals(assets, totalSupply() + feeShares, newTotalAssets, rounding);
   }
 
-  /// @inheritdoc ERC4626
+  /// @inheritdoc ERC4626Upgradeable
   /// @dev The accrual of performance fees is taken into account in the conversion.
   function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
     (uint256 feeShares, uint256 newTotalAssets) = _accruedFeeShares();
@@ -650,7 +684,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
     return shares.mulDiv(newTotalAssets + 1, newTotalSupply + 10 ** _decimalsOffset(), rounding);
   }
 
-  /// @inheritdoc ERC4626
+  /// @inheritdoc ERC4626Upgradeable
   /// @dev Used in mint or deposit to deposit the underlying asset to Morpho markets.
   function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
     super._deposit(caller, receiver, assets, shares);
@@ -661,7 +695,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
     _updateLastTotalAssets(lastTotalAssets + assets);
   }
 
-  /// @inheritdoc ERC4626
+  /// @inheritdoc ERC4626Upgradeable
   /// @dev Used in redeem or withdraw to withdraw the underlying asset from Morpho markets.
   /// @dev Depending on 3 cases, reverts when withdrawing "too much" with:
   /// 1. NotEnoughLiquidity when withdrawing more than available liquidity.
@@ -853,7 +887,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
     // Inside a flashloan callback, liquidity on Morpho Blue may be limited to the singleton's balance.
     uint256 availableLiquidity = UtilsLib.min(
       totalSupplyAssets - totalBorrowAssets,
-      ERC20(marketParams.loanToken).balanceOf(address(MORPHO))
+      ERC20Upgradeable(marketParams.loanToken).balanceOf(address(MORPHO))
     );
 
     return UtilsLib.min(supplyAssets, availableLiquidity);
@@ -893,4 +927,6 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
       feeShares = _convertToSharesWithTotals(feeAssets, totalSupply(), newTotalAssets - feeAssets, Math.Rounding.Floor);
     }
   }
+
+  function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 }
