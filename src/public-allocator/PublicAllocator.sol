@@ -50,12 +50,6 @@ contract PublicAllocator is UUPSUpgradeable, AccessControlUpgradeable, IPublicAl
     _;
   }
 
-  /// @dev Reverts if the caller is not the superAdmin.
-  modifier onlySuperAdmin() {
-    require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), ErrorsLib.NOT_ADMIN);
-    _;
-  }
-
   /* CONSTRUCTOR */
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -178,5 +172,5 @@ contract PublicAllocator is UUPSUpgradeable, AccessControlUpgradeable, IPublicAl
     emit EventsLib.PublicReallocateTo(msg.sender, vault, supplyMarketId, totalWithdrawn);
   }
 
-  function _authorizeUpgrade(address newImplementation) internal override onlySuperAdmin {}
+  function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 }
