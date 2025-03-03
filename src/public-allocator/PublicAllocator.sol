@@ -25,7 +25,7 @@ contract PublicAllocator is UUPSUpgradeable, AccessControlUpgradeable, IPublicAl
   /* CONSTANTS */
 
   /// @inheritdoc IPublicAllocatorBase
-  IMorpho public MORPHO;
+  IMorpho public immutable MORPHO;
 
   /* STORAGE */
 
@@ -59,19 +59,22 @@ contract PublicAllocator is UUPSUpgradeable, AccessControlUpgradeable, IPublicAl
   /* CONSTRUCTOR */
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() {
+  /// @param morpho The address of the Morpho contract.
+  constructor(address morpho) {
+    require(morpho != address(0), ErrorsLib.ZERO_ADDRESS);
     _disableInitializers();
+    MORPHO = IMorpho(morpho);
   }
 
   /// @dev Initializes the contract.
-  function initialize(address _admin, address _manager, address _morpho) public initializer {
+  /// @param _admin The new admin of the contract.
+  /// @param _manager The new manager of the contract.
+  function initialize(address _admin, address _manager) public initializer {
     require(_admin != address(0), ErrorsLib.ZERO_ADDRESS);
     require(_manager != address(0), ErrorsLib.ZERO_ADDRESS);
-    require(_morpho != address(0), ErrorsLib.ZERO_ADDRESS);
 
     __AccessControl_init();
 
-    MORPHO = IMorpho(_morpho);
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
     _grantRole(MANAGER, _manager);
   }

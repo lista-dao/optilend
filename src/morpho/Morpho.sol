@@ -33,7 +33,7 @@ contract Morpho is UUPSUpgradeable, AccessControlUpgradeable, IMorphoStaticTypin
   /* IMMUTABLES */
 
   /// @inheritdoc IMorphoBase
-  bytes32 public DOMAIN_SEPARATOR;
+  bytes32 public immutable DOMAIN_SEPARATOR;
 
   /* STORAGE */
 
@@ -61,6 +61,7 @@ contract Morpho is UUPSUpgradeable, AccessControlUpgradeable, IMorphoStaticTypin
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
     _disableInitializers();
+    DOMAIN_SEPARATOR = keccak256(abi.encode(DOMAIN_TYPEHASH, block.chainid, address(this)));
   }
 
   /// @param admin The new admin of the contract.
@@ -70,8 +71,6 @@ contract Morpho is UUPSUpgradeable, AccessControlUpgradeable, IMorphoStaticTypin
     require(manager != address(0), ErrorsLib.ZERO_ADDRESS);
 
     __AccessControl_init();
-
-    DOMAIN_SEPARATOR = keccak256(abi.encode(DOMAIN_TYPEHASH, block.chainid, address(this)));
 
     _grantRole(DEFAULT_ADMIN_ROLE, admin);
     _grantRole(MANAGER, manager);

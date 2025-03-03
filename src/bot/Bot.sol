@@ -7,24 +7,29 @@ import { AccessControlUpgradeable } from "../../lib/openzeppelin-contracts-upgra
 import { UUPSUpgradeable } from "../../lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 contract Bot is UUPSUpgradeable, AccessControlUpgradeable, IBot {
+  /// @dev Thrown when passing the zero address.
+  string internal constant ZERO_ADDRESS = "zero address";
   error NoProfit();
   error OnlyAdmin();
   error OnlyManager();
   error OnlyBot();
   error OnlyMorpho();
-  address public immutable owner;
-  address public constant MORPHO = 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb;
+  address public immutable MORPHO;
 
   bytes32 public constant MANAGER = keccak256("MANAGER"); // manager role
   bytes32 public constant BOT = keccak256("BOT"); // manager role
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() payable {
+  /// @param morpho The address of the Morpho contract.
+  constructor(address morpho) payable {
+    require(morpho != address(0), ZERO_ADDRESS);
     _disableInitializers();
-    owner = msg.sender;
+    MORPHO = morpho;
   }
 
   function initialize(address admin, address manager) public initializer {
+    require(admin != address(0), ZERO_ADDRESS);
+    require(manager != address(0), ZERO_ADDRESS);
     __AccessControl_init();
     _grantRole(DEFAULT_ADMIN_ROLE, admin);
     _grantRole(MANAGER, manager);

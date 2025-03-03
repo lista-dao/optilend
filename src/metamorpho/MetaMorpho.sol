@@ -50,12 +50,12 @@ contract MetaMorpho is
   /* IMMUTABLES */
 
   /// @inheritdoc IMetaMorphoBase
-  IMorpho public MORPHO;
+  IMorpho public immutable MORPHO;
 
   /// @notice OpenZeppelin decimals offset used by the ERC4626 implementation.
   /// @dev Calculated to be max(0, 18 - underlyingDecimals) at construction, so the initial conversion rate maximizes
   /// precision between shares and assets.
-  uint8 public DECIMALS_OFFSET;
+  uint8 public immutable DECIMALS_OFFSET;
 
   /* STORAGE */
 
@@ -100,14 +100,18 @@ contract MetaMorpho is
   /* CONSTRUCTOR */
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() {
+  /// @param morpho The address of the Morpho contract.
+  /// @param _asset The address of the underlying asset.
+  constructor(address morpho, address _asset) {
+    if (morpho == address(0)) revert ErrorsLib.ZeroAddress();
     _disableInitializers();
+    MORPHO = IMorpho(morpho);
+    DECIMALS_OFFSET = uint8(uint256(18).zeroFloorSub(IERC20Metadata(_asset).decimals()));
   }
 
   /// @dev Initializes the contract.
   /// @param admin The new admin of the contract.
-  /// @param admin The new manager of the contract.
-  /// @param morpho The address of the Morpho contract.
+  /// @param manager The new manager of the contract.
   /// @param initialTimelock The initial timelock.
   /// @param _asset The address of the underlying asset.
   /// @param _name The name of the vault.
@@ -115,13 +119,11 @@ contract MetaMorpho is
   function initalize(
     address admin,
     address manager,
-    address morpho,
     uint256 initialTimelock,
     address _asset,
     string memory _name,
     string memory _symbol
   ) public initializer {
-    if (morpho == address(0)) revert ErrorsLib.ZeroAddress();
     if (admin == address(0)) revert ErrorsLib.ZeroAddress();
     if (manager == address(0)) revert ErrorsLib.ZeroAddress();
 
@@ -129,16 +131,13 @@ contract MetaMorpho is
     __ERC20_init(_name, _symbol);
     __AccessControl_init();
 
-    MORPHO = IMorpho(morpho);
     _grantRole(DEFAULT_ADMIN_ROLE, admin);
     _grantRole(MANAGER, manager);
-
-    DECIMALS_OFFSET = uint8(uint256(18).zeroFloorSub(IERC20Metadata(_asset).decimals()));
 
     _checkTimelockBounds(initialTimelock);
     _setTimelock(initialTimelock);
 
-    IERC20(_asset).forceApprove(morpho, type(uint256).max);
+    IERC20(_asset).forceApprove(address(MORPHO), type(uint256).max);
   }
 
   /* MODIFIERS */

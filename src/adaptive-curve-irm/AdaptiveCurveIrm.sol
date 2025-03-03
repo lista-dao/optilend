@@ -32,7 +32,7 @@ contract AdaptiveCurveIrm is UUPSUpgradeable, AccessControlUpgradeable, IAdaptiv
   /* IMMUTABLES */
 
   /// @inheritdoc IAdaptiveCurveIrm
-  address public MORPHO;
+  address public immutable MORPHO;
 
   /* STORAGE */
 
@@ -44,20 +44,22 @@ contract AdaptiveCurveIrm is UUPSUpgradeable, AccessControlUpgradeable, IAdaptiv
   /* CONSTRUCTOR */
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() {
+  /// @param morpho The address of the Morpho contract.
+  constructor(address morpho) {
+    require(morpho != address(0), ErrorsLib.ZERO_ADDRESS);
     _disableInitializers();
+    MORPHO = morpho;
   }
 
   /// @notice Constructor.
-  /// @param morpho The address of Morpho.
-  function initialize(address admin, address manager, address morpho) public initializer {
+  /// @param admin The new admin of the contract.
+  /// @param manager The new manager of the contract.
+  function initialize(address admin, address manager) public initializer {
     require(admin != address(0), ErrorsLib.ZERO_ADDRESS);
     require(manager != address(0), ErrorsLib.ZERO_ADDRESS);
-    require(morpho != address(0), ErrorsLib.ZERO_ADDRESS);
 
     __AccessControl_init();
 
-    MORPHO = morpho;
     _grantRole(DEFAULT_ADMIN_ROLE, admin);
     _grantRole(MANAGER, manager);
   }
