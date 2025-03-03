@@ -18,7 +18,6 @@ import { IERC20Metadata } from "../../lib/openzeppelin-contracts/contracts/token
 import { MorphoBalancesLib } from "../morpho/libraries/periphery/MorphoBalancesLib.sol";
 
 import { MulticallUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/utils/MulticallUpgradeable.sol";
-import { Ownable2StepUpgradeable, OwnableUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
 import { ERC20PermitUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import { IERC20, IERC4626, ERC20Upgradeable, ERC4626Upgradeable, Math, SafeERC20 } from "../../lib/openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import { AccessControlUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
@@ -33,7 +32,6 @@ contract MetaMorpho is
   AccessControlUpgradeable,
   ERC4626Upgradeable,
   ERC20PermitUpgradeable,
-  Ownable2StepUpgradeable,
   MulticallUpgradeable,
   IMetaMorphoStaticTyping
 {
@@ -60,15 +58,6 @@ contract MetaMorpho is
   uint8 public DECIMALS_OFFSET;
 
   /* STORAGE */
-
-  /// @inheritdoc IMetaMorphoBase
-  address public curator;
-
-  /// @inheritdoc IMetaMorphoBase
-  mapping(address => bool) public isAllocator;
-
-  /// @inheritdoc IMetaMorphoBase
-  address public guardian;
 
   /// @inheritdoc IMetaMorphoStaticTyping
   mapping(Id => MarketConfig) public config;
@@ -104,6 +93,9 @@ contract MetaMorpho is
   uint256 public lastTotalAssets;
 
   bytes32 public constant MANAGER = keccak256("MANAGER"); // manager role
+  bytes32 public constant CURATOR = keccak256("CURATOR"); // manager role
+  bytes32 public constant ALLOCATOR = keccak256("ALLOCATOR"); // manager role
+  bytes32 public constant GUARDIAN = keccak256("GUARDIAN"); // manager role
 
   /* CONSTRUCTOR */
 
@@ -113,14 +105,14 @@ contract MetaMorpho is
   }
 
   /// @dev Initializes the contract.
-  /// @param owner The owner of the contract.
+  /// @param admin The new admin of the contract.
+  /// @param admin The new manager of the contract.
   /// @param morpho The address of the Morpho contract.
   /// @param initialTimelock The initial timelock.
   /// @param _asset The address of the underlying asset.
   /// @param _name The name of the vault.
   /// @param _symbol The symbol of the vault.
   function initalize(
-    address owner,
     address admin,
     address manager,
     address morpho,
@@ -135,7 +127,6 @@ contract MetaMorpho is
 
     __ERC4626_init(IERC20(_asset));
     __ERC20_init(_name, _symbol);
-    __Ownable_init(owner);
     __AccessControl_init();
 
     MORPHO = IMorpho(morpho);
@@ -154,14 +145,20 @@ contract MetaMorpho is
 
   /// @dev Reverts if the caller is not the admin.
   modifier onlyAdmin() {
-    require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), ErrorsLib.NOT_ADMIN);
+    require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), ErrorsLib.NOT_ADMIN);
+    _;
+  }
+
+  /// @dev Reverts if the caller is not the manager.
+  modifier onlyManager() {
+    require(hasRole(MANAGER, _msgSender()), ErrorsLib.NOT_ADMIN);
     _;
   }
 
   /// @dev Reverts if the caller doesn't have the curator role.
   modifier onlyCuratorRole() {
     address sender = _msgSender();
-    if (sender != curator && sender != owner()) revert ErrorsLib.NotCuratorRole();
+    if (!hasRole(CURATOR, sender) && !hasRole(MANAGER, sender)) revert ErrorsLib.NotCuratorRole();
 
     _;
   }
@@ -169,7 +166,7 @@ contract MetaMorpho is
   /// @dev Reverts if the caller doesn't have the allocator role.
   modifier onlyAllocatorRole() {
     address sender = _msgSender();
-    if (!isAllocator[sender] && sender != curator && sender != owner()) {
+    if (!hasRole(ALLOCATOR, sender) && !hasRole(CURATOR, sender) && !hasRole(MANAGER, sender)) {
       revert ErrorsLib.NotAllocatorRole();
     }
 
@@ -178,14 +175,16 @@ contract MetaMorpho is
 
   /// @dev Reverts if the caller doesn't have the guardian role.
   modifier onlyGuardianRole() {
-    if (_msgSender() != owner() && _msgSender() != guardian) revert ErrorsLib.NotGuardianRole();
+    address sender = _msgSender();
+    if (!hasRole(MANAGER, sender) && !hasRole(GUARDIAN, sender)) revert ErrorsLib.NotGuardianRole();
 
     _;
   }
 
   /// @dev Reverts if the caller doesn't have the curator nor the guardian role.
   modifier onlyCuratorOrGuardianRole() {
-    if (_msgSender() != guardian && _msgSender() != curator && _msgSender() != owner()) {
+    address sender = _msgSender();
+    if (!hasRole(GUARDIAN, sender) && !hasRole(CURATOR, sender) && !hasRole(MANAGER, sender)) {
       revert ErrorsLib.NotCuratorNorGuardianRole();
     }
 
@@ -203,28 +202,32 @@ contract MetaMorpho is
     _;
   }
 
-  /* ONLY OWNER FUNCTIONS */
+  /* ONLY MANAGER FUNCTIONS */
 
   /// @inheritdoc IMetaMorphoBase
-  function setCurator(address newCurator) external onlyOwner {
-    if (newCurator == curator) revert ErrorsLib.AlreadySet();
+  function setCurator(address newCurator) external onlyManager {
+    if (hasRole(CURATOR, newCurator)) revert ErrorsLib.AlreadySet();
 
-    curator = newCurator;
+    _grantRole(CURATOR, newCurator);
 
     emit EventsLib.SetCurator(newCurator);
   }
 
   /// @inheritdoc IMetaMorphoBase
-  function setIsAllocator(address newAllocator, bool newIsAllocator) external onlyOwner {
-    if (isAllocator[newAllocator] == newIsAllocator) revert ErrorsLib.AlreadySet();
+  function setIsAllocator(address newAllocator, bool newIsAllocator) external onlyManager {
+    if (hasRole(ALLOCATOR, newAllocator) == newIsAllocator) revert ErrorsLib.AlreadySet();
 
-    isAllocator[newAllocator] = newIsAllocator;
+    if (newIsAllocator) {
+      _grantRole(ALLOCATOR, newAllocator);
+    } else {
+      _revokeRole(ALLOCATOR, newAllocator);
+    }
 
     emit EventsLib.SetIsAllocator(newAllocator, newIsAllocator);
   }
 
   /// @inheritdoc IMetaMorphoBase
-  function setSkimRecipient(address newSkimRecipient) external onlyOwner {
+  function setSkimRecipient(address newSkimRecipient) external onlyManager {
     if (newSkimRecipient == skimRecipient) revert ErrorsLib.AlreadySet();
 
     skimRecipient = newSkimRecipient;
@@ -233,7 +236,7 @@ contract MetaMorpho is
   }
 
   /// @inheritdoc IMetaMorphoBase
-  function submitTimelock(uint256 newTimelock) external onlyOwner {
+  function submitTimelock(uint256 newTimelock) external onlyManager {
     if (newTimelock == timelock) revert ErrorsLib.AlreadySet();
     if (pendingTimelock.validAt != 0) revert ErrorsLib.AlreadyPending();
     _checkTimelockBounds(newTimelock);
@@ -249,7 +252,7 @@ contract MetaMorpho is
   }
 
   /// @inheritdoc IMetaMorphoBase
-  function setFee(uint256 newFee) external onlyOwner {
+  function setFee(uint256 newFee) external onlyManager {
     if (newFee == fee) revert ErrorsLib.AlreadySet();
     if (newFee > ConstantsLib.MAX_FEE) revert ErrorsLib.MaxFeeExceeded();
     if (newFee != 0 && feeRecipient == address(0)) revert ErrorsLib.ZeroFeeRecipient();
@@ -264,7 +267,7 @@ contract MetaMorpho is
   }
 
   /// @inheritdoc IMetaMorphoBase
-  function setFeeRecipient(address newFeeRecipient) external onlyOwner {
+  function setFeeRecipient(address newFeeRecipient) external onlyManager {
     if (newFeeRecipient == feeRecipient) revert ErrorsLib.AlreadySet();
     if (newFeeRecipient == address(0) && fee != 0) revert ErrorsLib.ZeroFeeRecipient();
 
@@ -277,17 +280,13 @@ contract MetaMorpho is
   }
 
   /// @inheritdoc IMetaMorphoBase
-  function submitGuardian(address newGuardian) external onlyOwner {
-    if (newGuardian == guardian) revert ErrorsLib.AlreadySet();
+  function submitGuardian(address newGuardian) external onlyManager {
+    if (hasRole(GUARDIAN, newGuardian)) revert ErrorsLib.AlreadySet();
     if (pendingGuardian.validAt != 0) revert ErrorsLib.AlreadyPending();
 
-    if (guardian == address(0)) {
-      _setGuardian(newGuardian);
-    } else {
-      pendingGuardian.update(newGuardian, timelock);
+    pendingGuardian.update(newGuardian, timelock);
 
-      emit EventsLib.SubmitGuardian(newGuardian);
-    }
+    emit EventsLib.SubmitGuardian(newGuardian);
   }
 
   /* ONLY CURATOR FUNCTIONS */
@@ -751,7 +750,7 @@ contract MetaMorpho is
 
   /// @dev Sets `guardian` to `newGuardian`.
   function _setGuardian(address newGuardian) internal {
-    guardian = newGuardian;
+    _grantRole(GUARDIAN, newGuardian);
 
     emit EventsLib.SetGuardian(_msgSender(), newGuardian);
 

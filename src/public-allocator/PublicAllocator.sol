@@ -44,7 +44,7 @@ contract PublicAllocator is UUPSUpgradeable, AccessControlUpgradeable, IPublicAl
 
   /// @dev Reverts if the caller is not the admin nor the owner of this vault.
   modifier onlyAdminOrVaultOwner(address vault) {
-    if (msg.sender != admin[vault] && msg.sender != IMetaMorpho(vault).owner()) {
+    if (msg.sender != admin[vault] && !IMetaMorpho(vault).hasRole(MANAGER, msg.sender)) {
       revert ErrorsLib.NotAdminNorVaultOwner();
     }
     _;
