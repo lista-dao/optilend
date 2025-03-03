@@ -43,4 +43,10 @@ library ErrorsLib {
 
   /// @notice Thrown when attempting to supply more than the max inflow of a market.
   error MaxInflowExceeded(Id id);
+
+  /// @notice Thrown when the caller is not the admin.
+  string internal constant NOT_ADMIN = "not admin";
+
+  /// @notice Thrown when a zero address is passed as input.
+  string internal constant ZERO_ADDRESS = "zero address";
 }

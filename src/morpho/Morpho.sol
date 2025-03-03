@@ -15,12 +15,14 @@ import { MathLib, WAD } from "./libraries/MathLib.sol";
 import { SharesMathLib } from "./libraries/SharesMathLib.sol";
 import { MarketParamsLib } from "./libraries/MarketParamsLib.sol";
 import { SafeTransferLib } from "./libraries/SafeTransferLib.sol";
+import { AccessControlUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
+import { UUPSUpgradeable } from "../../lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title Morpho
 /// @author Morpho Labs
 /// @custom:contact security@morpho.org
 /// @notice The Morpho contract.
-contract Morpho is IMorphoStaticTyping {
+contract Morpho is UUPSUpgradeable, AccessControlUpgradeable, IMorphoStaticTyping {
   using MathLib for uint128;
   using MathLib for uint256;
   using UtilsLib for uint256;
@@ -35,8 +37,6 @@ contract Morpho is IMorphoStaticTyping {
 
   /* STORAGE */
 
-  /// @inheritdoc IMorphoBase
-  address public owner;
   /// @inheritdoc IMorphoBase
   address public feeRecipient;
   /// @inheritdoc IMorphoStaticTyping
@@ -54,39 +54,46 @@ contract Morpho is IMorphoStaticTyping {
   /// @inheritdoc IMorphoStaticTyping
   mapping(Id => MarketParams) public idToMarketParams;
 
+  bytes32 public constant MANAGER = keccak256("MANAGER"); // manager role
+
   /* CONSTRUCTOR */
 
-  /// @param newOwner The new owner of the contract.
-  constructor(address newOwner) {
-    require(newOwner != address(0), ErrorsLib.ZERO_ADDRESS);
-
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  constructor() {
+    _disableInitializers();
     DOMAIN_SEPARATOR = keccak256(abi.encode(DOMAIN_TYPEHASH, block.chainid, address(this)));
-    owner = newOwner;
+  }
 
-    emit EventsLib.SetOwner(newOwner);
+  /// @param admin The new admin of the contract.
+  /// @param manager The new manager of the contract.
+  function initialize(address admin, address manager) public initializer {
+    require(admin != address(0), ErrorsLib.ZERO_ADDRESS);
+    require(manager != address(0), ErrorsLib.ZERO_ADDRESS);
+
+    __AccessControl_init();
+
+    _grantRole(DEFAULT_ADMIN_ROLE, admin);
+    _grantRole(MANAGER, manager);
   }
 
   /* MODIFIERS */
 
-  /// @dev Reverts if the caller is not the owner.
-  modifier onlyOwner() {
-    require(msg.sender == owner, ErrorsLib.NOT_OWNER);
+  /// @dev Reverts if the caller is not the manager.
+  modifier onlyManager() {
+    require(hasRole(MANAGER, msg.sender), ErrorsLib.NOT_MANAGER);
     _;
   }
 
-  /* ONLY OWNER FUNCTIONS */
-
-  /// @inheritdoc IMorphoBase
-  function setOwner(address newOwner) external onlyOwner {
-    require(newOwner != owner, ErrorsLib.ALREADY_SET);
-
-    owner = newOwner;
-
-    emit EventsLib.SetOwner(newOwner);
+  /// @dev Reverts if the caller is not the admin.
+  modifier onlyAdmin() {
+    require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), ErrorsLib.NOT_ADMIN);
+    _;
   }
 
+  /* ONLY MANAGER FUNCTIONS */
+
   /// @inheritdoc IMorphoBase
-  function enableIrm(address irm) external onlyOwner {
+  function enableIrm(address irm) external onlyManager {
     require(!isIrmEnabled[irm], ErrorsLib.ALREADY_SET);
 
     isIrmEnabled[irm] = true;
@@ -95,7 +102,7 @@ contract Morpho is IMorphoStaticTyping {
   }
 
   /// @inheritdoc IMorphoBase
-  function enableLltv(uint256 lltv) external onlyOwner {
+  function enableLltv(uint256 lltv) external onlyManager {
     require(!isLltvEnabled[lltv], ErrorsLib.ALREADY_SET);
     require(lltv < WAD, ErrorsLib.MAX_LLTV_EXCEEDED);
 
@@ -105,7 +112,7 @@ contract Morpho is IMorphoStaticTyping {
   }
 
   /// @inheritdoc IMorphoBase
-  function setFee(MarketParams memory marketParams, uint256 newFee) external onlyOwner {
+  function setFee(MarketParams memory marketParams, uint256 newFee) external onlyManager {
     Id id = marketParams.id();
     require(market[id].lastUpdate != 0, ErrorsLib.MARKET_NOT_CREATED);
     require(newFee != market[id].fee, ErrorsLib.ALREADY_SET);
@@ -121,7 +128,7 @@ contract Morpho is IMorphoStaticTyping {
   }
 
   /// @inheritdoc IMorphoBase
-  function setFeeRecipient(address newFeeRecipient) external onlyOwner {
+  function setFeeRecipient(address newFeeRecipient) external onlyManager {
     require(newFeeRecipient != feeRecipient, ErrorsLib.ALREADY_SET);
 
     feeRecipient = newFeeRecipient;
@@ -132,7 +139,7 @@ contract Morpho is IMorphoStaticTyping {
   /* MARKET CREATION */
 
   /// @inheritdoc IMorphoBase
-  function createMarket(MarketParams memory marketParams) external {
+  function createMarket(MarketParams memory marketParams) external onlyManager {
     Id id = marketParams.id();
     require(isIrmEnabled[marketParams.irm], ErrorsLib.IRM_NOT_ENABLED);
     require(isLltvEnabled[marketParams.lltv], ErrorsLib.LLTV_NOT_ENABLED);
@@ -560,4 +567,6 @@ contract Morpho is IMorphoStaticTyping {
       }
     }
   }
+
+  function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 }
