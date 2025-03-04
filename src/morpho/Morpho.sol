@@ -17,6 +17,7 @@ import { MarketParamsLib } from "./libraries/MarketParamsLib.sol";
 import { SafeTransferLib } from "./libraries/SafeTransferLib.sol";
 import { AccessControlUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
 import { UUPSUpgradeable } from "../../lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { IERC20Metadata } from "../../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /// @title Morpho
 /// @author Morpho Labs
@@ -54,6 +55,8 @@ contract Morpho is UUPSUpgradeable, AccessControlUpgradeable, IMorphoStaticTypin
   /// @inheritdoc IMorphoStaticTyping
   mapping(Id => MarketParams) public idToMarketParams;
 
+  IOracle public oracle;
+
   bytes32 public constant MANAGER = keccak256("MANAGER"); // manager role
 
   /* CONSTRUCTOR */
@@ -66,14 +69,17 @@ contract Morpho is UUPSUpgradeable, AccessControlUpgradeable, IMorphoStaticTypin
 
   /// @param admin The new admin of the contract.
   /// @param manager The new manager of the contract.
-  function initialize(address admin, address manager) public initializer {
+  /// @param _oracle The address of the oracle contract.
+  function initialize(address admin, address manager, address _oracle) public initializer {
     require(admin != address(0), ErrorsLib.ZERO_ADDRESS);
     require(manager != address(0), ErrorsLib.ZERO_ADDRESS);
+    require(_oracle != address(0), ErrorsLib.ZERO_ADDRESS);
 
     __AccessControl_init();
 
     _grantRole(DEFAULT_ADMIN_ROLE, admin);
     _grantRole(MANAGER, manager);
+    oracle = IOracle(_oracle);
   }
 
   /* MODIFIERS */
@@ -356,7 +362,7 @@ contract Morpho is UUPSUpgradeable, AccessControlUpgradeable, IMorphoStaticTypin
     _accrueInterest(marketParams, id);
 
     {
-      uint256 collateralPrice = IOracle(marketParams.oracle).price();
+      uint256 collateralPrice = getPrice(marketParams.collateralToken, marketParams.loanToken);
 
       require(!_isHealthy(marketParams, id, borrower, collateralPrice), ErrorsLib.HEALTHY_POSITION);
 
@@ -525,7 +531,7 @@ contract Morpho is UUPSUpgradeable, AccessControlUpgradeable, IMorphoStaticTypin
   function _isHealthy(MarketParams memory marketParams, Id id, address borrower) internal view returns (bool) {
     if (position[id][borrower].borrowShares == 0) return true;
 
-    uint256 collateralPrice = IOracle(marketParams.oracle).price();
+    uint256 collateralPrice = getPrice(marketParams.collateralToken, marketParams.loanToken);
 
     return _isHealthy(marketParams, id, borrower, collateralPrice);
   }
@@ -566,6 +572,15 @@ contract Morpho is UUPSUpgradeable, AccessControlUpgradeable, IMorphoStaticTypin
         mstore(add(res, mul(i, 32)), sload(slot))
       }
     }
+  }
+
+  function getPrice(address baseToken, address quotaToken) private view returns (uint256) {
+    uint256 baseTokenDecimals = IERC20Metadata(baseToken).decimals();
+    uint256 quotaTokenDecimals = IERC20Metadata(quotaToken).decimals();
+    uint256 basePrice = oracle.peek(baseToken);
+    uint256 quotaPrice = oracle.peek(quotaToken);
+
+    return ORACLE_PRICE_SCALE.mulDivDown(basePrice * 10 ** quotaTokenDecimals, quotaPrice * 10 ** baseTokenDecimals);
   }
 
   function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}

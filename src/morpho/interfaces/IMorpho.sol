@@ -6,7 +6,6 @@ type Id is bytes32;
 struct MarketParams {
   address loanToken;
   address collateralToken;
-  address oracle;
   address irm;
   uint256 lltv;
 }
@@ -324,7 +323,7 @@ interface IMorphoStaticTyping is IMorphoBase {
   /// 2s by creating a wrapper contract with functions that take `id` as input instead of `marketParams`.
   function idToMarketParams(
     Id id
-  ) external view returns (address loanToken, address collateralToken, address oracle, address irm, uint256 lltv);
+  ) external view returns (address loanToken, address collateralToken, address irm, uint256 lltv);
 }
 
 /// @title IMorpho
