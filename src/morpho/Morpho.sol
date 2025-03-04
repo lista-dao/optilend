@@ -580,7 +580,7 @@ contract Morpho is UUPSUpgradeable, AccessControlUpgradeable, IMorphoStaticTypin
     uint256 basePrice = oracle.peek(baseToken);
     uint256 quotaPrice = oracle.peek(quotaToken);
 
-    return ORACLE_PRICE_SCALE.mulDivDown(basePrice * 10 ** quotaTokenDecimals, quotaPrice * 10 ** baseTokenDecimals);
+    return ORACLE_PRICE_SCALE.mulDivDown(basePrice * 10 ** baseTokenDecimals, quotaPrice * 10 ** quotaTokenDecimals);
   }
 
   function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
