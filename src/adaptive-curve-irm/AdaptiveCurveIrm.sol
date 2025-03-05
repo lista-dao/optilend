@@ -12,11 +12,13 @@ import { ConstantsLib } from "./libraries/ConstantsLib.sol";
 import { MarketParamsLib } from "../morpho/libraries/MarketParamsLib.sol";
 import { Id, MarketParams, Market } from "../morpho/interfaces/IMorpho.sol";
 import { MathLib as MorphoMathLib } from "../morpho/libraries/MathLib.sol";
+import { AccessControlUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
+import { UUPSUpgradeable } from "../../lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title AdaptiveCurveIrm
 /// @author Morpho Labs
 /// @custom:contact security@morpho.org
-contract AdaptiveCurveIrm is IAdaptiveCurveIrm {
+contract AdaptiveCurveIrm is UUPSUpgradeable, AccessControlUpgradeable, IAdaptiveCurveIrm {
   using MathLib for int256;
   using UtilsLib for int256;
   using MorphoMathLib for uint128;
@@ -37,14 +39,37 @@ contract AdaptiveCurveIrm is IAdaptiveCurveIrm {
   /// @inheritdoc IAdaptiveCurveIrm
   mapping(Id => int256) public rateAtTarget;
 
+  bytes32 public constant MANAGER = keccak256("MANAGER"); // manager role
+
   /* CONSTRUCTOR */
 
-  /// @notice Constructor.
-  /// @param morpho The address of Morpho.
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  /// @param morpho The address of the Morpho contract.
   constructor(address morpho) {
     require(morpho != address(0), ErrorsLib.ZERO_ADDRESS);
-
+    _disableInitializers();
     MORPHO = morpho;
+  }
+
+  /// @notice Constructor.
+  /// @param admin The new admin of the contract.
+  /// @param manager The new manager of the contract.
+  function initialize(address admin, address manager) public initializer {
+    require(admin != address(0), ErrorsLib.ZERO_ADDRESS);
+    require(manager != address(0), ErrorsLib.ZERO_ADDRESS);
+
+    __AccessControl_init();
+
+    _grantRole(DEFAULT_ADMIN_ROLE, admin);
+    _grantRole(MANAGER, manager);
+  }
+
+  /* MODIFIERS */
+
+  /// @dev Reverts if the caller is not the admin.
+  modifier onlyAdmin() {
+    require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), ErrorsLib.NOT_ADMIN);
+    _;
   }
 
   /* BORROW RATES */
@@ -151,4 +176,6 @@ contract AdaptiveCurveIrm is IAdaptiveCurveIrm {
         ConstantsLib.MAX_RATE_AT_TARGET
       );
   }
+
+  function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 }

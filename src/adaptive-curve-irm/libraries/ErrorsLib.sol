@@ -11,4 +11,7 @@ library ErrorsLib {
 
   /// @dev Thrown when the caller is not Morpho.
   string internal constant NOT_MORPHO = "not Morpho";
+
+  /// @notice Thrown when the caller is not the admin.
+  string internal constant NOT_ADMIN = "not admin";
 }
