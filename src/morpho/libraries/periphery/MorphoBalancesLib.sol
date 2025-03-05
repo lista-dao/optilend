@@ -6,7 +6,6 @@ import { IIrm } from "../../interfaces/IIrm.sol";
 
 import { MathLib } from "../MathLib.sol";
 import { UtilsLib } from "../UtilsLib.sol";
-import { MorphoLib } from "./MorphoLib.sol";
 import { SharesMathLib } from "../SharesMathLib.sol";
 import { MarketParamsLib } from "../MarketParamsLib.sol";
 
@@ -21,7 +20,6 @@ library MorphoBalancesLib {
   using MathLib for uint256;
   using MathLib for uint128;
   using UtilsLib for uint256;
-  using MorphoLib for IMorpho;
   using SharesMathLib for uint256;
   using MarketParamsLib for MarketParams;
 
@@ -92,7 +90,7 @@ library MorphoBalancesLib {
     address user
   ) internal view returns (uint256) {
     Id id = marketParams.id();
-    uint256 supplyShares = morpho.supplyShares(id, user);
+    uint256 supplyShares = morpho.position(id, user).supplyShares;
     (uint256 totalSupplyAssets, uint256 totalSupplyShares, , ) = expectedMarketBalances(morpho, marketParams);
 
     return supplyShares.toAssetsDown(totalSupplyAssets, totalSupplyShares);
@@ -107,7 +105,7 @@ library MorphoBalancesLib {
     address user
   ) internal view returns (uint256) {
     Id id = marketParams.id();
-    uint256 borrowShares = morpho.borrowShares(id, user);
+    uint256 borrowShares = morpho.position(id, user).borrowShares;
     (, , uint256 totalBorrowAssets, uint256 totalBorrowShares) = expectedMarketBalances(morpho, marketParams);
 
     return borrowShares.toAssetsUp(totalBorrowAssets, totalBorrowShares);

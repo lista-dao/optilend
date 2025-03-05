@@ -12,16 +12,17 @@ import { WAD } from "../morpho/libraries/MathLib.sol";
 import { UtilsLib } from "../morpho/libraries/UtilsLib.sol";
 import { SafeCast } from "../../lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import { SharesMathLib } from "../morpho/libraries/SharesMathLib.sol";
-import { MorphoLib } from "../morpho/libraries/periphery/MorphoLib.sol";
+//import { MorphoLib } from "../morpho/libraries/periphery/MorphoLib.sol";
 import { MarketParamsLib } from "../morpho/libraries/MarketParamsLib.sol";
 import { IERC20Metadata } from "../../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { MorphoBalancesLib } from "../morpho/libraries/periphery/MorphoBalancesLib.sol";
+//import { MorphoBalancesLib } from "../morpho/libraries/periphery/MorphoBalancesLib.sol";
 
 import { MulticallUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/utils/MulticallUpgradeable.sol";
 import { ERC20PermitUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import { IERC20, IERC4626, ERC20Upgradeable, ERC4626Upgradeable, Math, SafeERC20 } from "../../lib/openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import { AccessControlUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
 import { UUPSUpgradeable } from "../../lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { MorphoBalancesLib } from "../morpho/libraries/periphery/MorphoBalancesLib.sol";
 
 /// @title MetaMorpho
 /// @author Morpho Labs
@@ -39,10 +40,9 @@ contract MetaMorpho is
   using UtilsLib for uint256;
   using SafeCast for uint256;
   using SafeERC20 for IERC20;
-  using MorphoLib for IMorpho;
   using SharesMathLib for uint256;
-  using MorphoBalancesLib for IMorpho;
   using MarketParamsLib for MarketParams;
+  using MorphoBalancesLib for IMorpho;
   using PendingLib for MarketConfig;
   using PendingLib for PendingUint192;
   using PendingLib for PendingAddress;
@@ -294,7 +294,7 @@ contract MetaMorpho is
   function submitCap(MarketParams memory marketParams, uint256 newSupplyCap) external onlyCuratorRole {
     Id id = marketParams.id();
     if (marketParams.loanToken != asset()) revert ErrorsLib.InconsistentAsset(id);
-    if (MORPHO.lastUpdate(id) == 0) revert ErrorsLib.MarketNotCreated();
+    if (MORPHO.market(id).lastUpdate == 0) revert ErrorsLib.MarketNotCreated();
     if (pendingCap[id].validAt != 0) revert ErrorsLib.AlreadyPending();
     if (config[id].removableAt != 0) revert ErrorsLib.PendingRemoval();
     uint256 supplyCap = config[id].cap;
@@ -366,7 +366,7 @@ contract MetaMorpho is
         if (config[id].cap != 0) revert ErrorsLib.InvalidMarketRemovalNonZeroCap(id);
         if (pendingCap[id].validAt != 0) revert ErrorsLib.PendingCap(id);
 
-        if (MORPHO.supplyShares(id, address(this)) != 0) {
+        if (MORPHO.position(id, address(this)).supplyShares != 0) {
           if (config[id].removableAt == 0) revert ErrorsLib.InvalidMarketRemovalNonZeroSupply(id);
 
           if (block.timestamp < config[id].removableAt) {
@@ -635,7 +635,7 @@ contract MetaMorpho is
       uint256 supplyCap = config[id].cap;
       if (supplyCap == 0) continue;
 
-      uint256 supplyShares = MORPHO.supplyShares(id, address(this));
+      uint256 supplyShares = MORPHO.position(id, address(this)).supplyShares;
       (uint256 totalSupplyAssets, uint256 totalSupplyShares, , ) = MORPHO.expectedMarketBalances(_marketParams(id));
       // `supplyAssets` needs to be rounded up for `totalSuppliable` to be rounded down.
       uint256 supplyAssets = supplyShares.toAssetsUp(totalSupplyAssets, totalSupplyShares);
@@ -728,7 +728,7 @@ contract MetaMorpho is
     MORPHO.accrueInterest(marketParams);
 
     market = MORPHO.market(id);
-    shares = MORPHO.supplyShares(id, address(this));
+    shares = MORPHO.position(id, address(this)).supplyShares;
     assets = shares.toAssetsDown(market.totalSupplyAssets, market.totalSupplyShares);
   }
 
@@ -800,7 +800,7 @@ contract MetaMorpho is
       MORPHO.accrueInterest(marketParams);
 
       Market memory market = MORPHO.market(id);
-      uint256 supplyShares = MORPHO.supplyShares(id, address(this));
+      uint256 supplyShares = MORPHO.position(id, address(this)).supplyShares;
       // `supplyAssets` needs to be rounded up for `toSupply` to be rounded down.
       uint256 supplyAssets = supplyShares.toAssetsUp(market.totalSupplyAssets, market.totalSupplyShares);
 
@@ -851,7 +851,7 @@ contract MetaMorpho is
       Id id = withdrawQueue[i];
       MarketParams memory marketParams = _marketParams(id);
 
-      uint256 supplyShares = MORPHO.supplyShares(id, address(this));
+      uint256 supplyShares = MORPHO.position(id, address(this)).supplyShares;
       (uint256 totalSupplyAssets, uint256 totalSupplyShares, uint256 totalBorrowAssets, ) = MORPHO
         .expectedMarketBalances(marketParams);
 

@@ -286,7 +286,7 @@ interface IMorphoBase {
   function accrueInterest(MarketParams memory marketParams) external;
 
   /// @notice Returns the data stored on the different `slots`.
-  function extSloads(bytes32[] memory slots) external view returns (bytes32[] memory);
+  //  function extSloads(bytes32[] memory slots) external view returns (bytes32[] memory);
 }
 
 /// @dev This interface is inherited by Morpho so that function signatures are checked by the compiler.
