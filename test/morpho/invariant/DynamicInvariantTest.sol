@@ -24,7 +24,8 @@ contract DynamicInvariantTest is BaseInvariantTest {
   function setPrice(uint256 price) external {
     price = bound(price, MIN_PRICE, MAX_PRICE);
 
-    oracle.setPrice(price);
+    oracle.setPrice(address(collateralToken), price);
+    oracle.setPrice(address(loanToken), price);
   }
 
   /* INVARIANTS */

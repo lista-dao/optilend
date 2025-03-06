@@ -167,7 +167,7 @@ contract BaseInvariantTest is InvariantTest {
     address borrower,
     uint256 seizedAssets
   ) internal logCall("liquidateSeizedAssets") {
-    uint256 collateralPrice = oracle.price();
+    uint256 collateralPrice = morpho.getPrice(_marketParams);
     uint256 liquidationIncentiveFactor = _liquidationIncentiveFactor(_marketParams.lltv);
     (, , uint256 totalBorrowAssets, uint256 totalBorrowShares) = morpho.expectedMarketBalances(_marketParams);
     uint256 seizedAssetsQuoted = seizedAssets.mulDivUp(collateralPrice, ORACLE_PRICE_SCALE);

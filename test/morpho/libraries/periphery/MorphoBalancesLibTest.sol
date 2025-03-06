@@ -135,9 +135,8 @@ contract MorphoBalancesLibTest is BaseTest {
     if (amountSupplied > 0) {
       loanToken.setBalance(address(this), amountSupplied);
       morpho.supply(marketParams, amountSupplied, 0, address(this), hex"");
-
       if (amountBorrowed > 0) {
-        uint256 collateralPrice = oracle.price();
+        uint256 collateralPrice = morpho.getPrice(marketParams);
         collateralToken.setBalance(
           BORROWER,
           amountBorrowed.wDivUp(marketParams.lltv).mulDivUp(ORACLE_PRICE_SCALE, collateralPrice)

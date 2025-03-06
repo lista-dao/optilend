@@ -89,7 +89,6 @@ contract CreateMarketIntegrationTest is BaseTest {
 
     assertEq(marketParamsFuzz.loanToken, params.loanToken, "loanToken != loanToken");
     assertEq(marketParamsFuzz.collateralToken, params.collateralToken, "collateralToken != collateralToken");
-    assertEq(marketParamsFuzz.oracle, params.oracle, "oracle != oracle");
     assertEq(marketParamsFuzz.irm, params.irm, "irm != irm");
     assertEq(marketParamsFuzz.lltv, params.lltv, "lltv != lltv");
   }

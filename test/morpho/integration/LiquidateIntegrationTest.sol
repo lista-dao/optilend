@@ -53,7 +53,7 @@ contract LiquidateIntegrationTest is BaseTest {
 
     amountSeized = bound(amountSeized, 1, amountCollateral);
 
-    oracle.setPrice(priceCollateral);
+    oracle.setPrice(address(collateralToken), priceCollateral);
 
     loanToken.setBalance(LIQUIDATOR, amountBorrowed);
     collateralToken.setBalance(BORROWER, amountCollateral);
@@ -95,7 +95,7 @@ contract LiquidateIntegrationTest is BaseTest {
 
     amountSeized = bound(amountSeized, 1, params.amountCollateral);
 
-    oracle.setPrice(params.priceCollateral);
+    oracle.setPrice(address(collateralToken), params.priceCollateral);
 
     loanToken.setBalance(LIQUIDATOR, params.amountBorrowed);
     collateralToken.setBalance(BORROWER, params.amountCollateral);
@@ -138,14 +138,16 @@ contract LiquidateIntegrationTest is BaseTest {
 
     collateralToken.setBalance(BORROWER, params.amountCollateral);
 
-    oracle.setPrice(type(uint256).max / params.amountCollateral);
+    oracle.setPrice(address(collateralToken), type(uint256).max / params.amountCollateral / 1e36);
+    oracle.setPrice(address(loanToken), 1);
 
     vm.startPrank(BORROWER);
     morpho.supplyCollateral(marketParams, params.amountCollateral, BORROWER, hex"");
     morpho.borrow(marketParams, params.amountBorrowed, 0, BORROWER, BORROWER);
     vm.stopPrank();
 
-    oracle.setPrice(params.priceCollateral);
+    oracle.setPrice(address(collateralToken), params.priceCollateral);
+    oracle.setPrice(address(loanToken), 1e36);
 
     uint256 borrowShares = morpho.position(id, BORROWER).borrowShares;
     uint256 liquidationIncentiveFactor = _liquidationIncentiveFactor(marketParams.lltv);
@@ -205,14 +207,16 @@ contract LiquidateIntegrationTest is BaseTest {
 
     collateralToken.setBalance(BORROWER, params.amountCollateral);
 
-    oracle.setPrice(type(uint256).max / params.amountCollateral);
+    oracle.setPrice(address(collateralToken), type(uint256).max / params.amountCollateral / 1e36);
+    oracle.setPrice(address(loanToken), 1);
 
     vm.startPrank(BORROWER);
     morpho.supplyCollateral(marketParams, params.amountCollateral, BORROWER, hex"");
     morpho.borrow(marketParams, params.amountBorrowed, 0, BORROWER, BORROWER);
     vm.stopPrank();
 
-    oracle.setPrice(params.priceCollateral);
+    oracle.setPrice(address(collateralToken), params.priceCollateral);
+    oracle.setPrice(address(loanToken), 1e36);
 
     uint256 borrowShares = morpho.position(id, BORROWER).borrowShares;
     uint256 liquidationIncentiveFactor = _liquidationIncentiveFactor(marketParams.lltv);
@@ -301,14 +305,16 @@ contract LiquidateIntegrationTest is BaseTest {
     loanToken.setBalance(LIQUIDATOR, amountBorrowed);
     collateralToken.setBalance(BORROWER, amountCollateral);
 
-    oracle.setPrice(type(uint256).max / amountCollateral);
+    oracle.setPrice(address(collateralToken), type(uint256).max / amountCollateral / 1e36);
+    oracle.setPrice(address(loanToken), 1);
 
     vm.startPrank(BORROWER);
     morpho.supplyCollateral(marketParams, amountCollateral, BORROWER, hex"");
     morpho.borrow(marketParams, amountBorrowed, 0, BORROWER, BORROWER);
     vm.stopPrank();
 
-    oracle.setPrice(priceCollateral);
+    oracle.setPrice(address(collateralToken), priceCollateral);
+    oracle.setPrice(address(loanToken), 1e36);
 
     params.expectedRepaidShares = params.expectedRepaid.toSharesDown(
       morpho.market(id).totalBorrowAssets,
@@ -379,7 +385,8 @@ contract LiquidateIntegrationTest is BaseTest {
     morpho.borrow(marketParams, 0, 1, BORROWER, BORROWER);
     vm.stopPrank();
 
-    oracle.setPrice(1e36 / 100);
+    oracle.setPrice(address(collateralToken), 1e8 / 100);
+    oracle.setPrice(address(loanToken), 1e8);
 
     loanToken.setBalance(LIQUIDATOR, loanAmount);
     vm.prank(LIQUIDATOR);
@@ -399,7 +406,8 @@ contract LiquidateIntegrationTest is BaseTest {
     morpho.borrow(marketParams, amountBorrowed, 0, BORROWER, BORROWER);
     vm.stopPrank();
 
-    oracle.setPrice(ORACLE_PRICE_SCALE - 0.01e18);
+    oracle.setPrice(address(collateralToken), ORACLE_PRICE_SCALE - 0.01e18);
+    oracle.setPrice(address(loanToken), ORACLE_PRICE_SCALE);
 
     loanToken.setBalance(LIQUIDATOR, amountBorrowed);
 

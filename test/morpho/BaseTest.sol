@@ -70,8 +70,9 @@ contract BaseTest is Test {
     LIQUIDATOR = makeAddr("Liquidator");
     OWNER = makeAddr("Owner");
     FEE_RECIPIENT = makeAddr("FeeRecipient");
+    oracle = new OracleMock();
 
-    morpho = newMorpho(OWNER, OWNER);
+    morpho = newMorpho(OWNER, OWNER, address(oracle));
 
     loanToken = new ERC20Mock();
     vm.label(address(loanToken), "LoanToken");
@@ -79,9 +80,8 @@ contract BaseTest is Test {
     collateralToken = new ERC20Mock();
     vm.label(address(collateralToken), "CollateralToken");
 
-    oracle = new OracleMock();
-
-    oracle.setPrice(ORACLE_PRICE_SCALE);
+    oracle.setPrice(address(collateralToken), ORACLE_PRICE_SCALE);
+    oracle.setPrice(address(loanToken), ORACLE_PRICE_SCALE);
 
     irm = new IrmMock();
 
@@ -220,7 +220,7 @@ contract BaseTest is Test {
     Id _id = _marketParams.id();
 
     uint256 collateral = morpho.position(_id, onBehalf).collateral;
-    uint256 collateralPrice = IOracle(_marketParams.oracle).price();
+    uint256 collateralPrice = morpho.getPrice(_marketParams);
     uint256 borrowed = morpho.expectedBorrowAssets(_marketParams, onBehalf);
 
     return
@@ -338,7 +338,7 @@ contract BaseTest is Test {
   ) internal view returns (uint256) {
     Id _id = _marketParams.id();
 
-    uint256 collateralPrice = IOracle(_marketParams.oracle).price();
+    uint256 collateralPrice = morpho.getPrice(_marketParams);
     uint256 borrowShares = morpho.position(_id, borrower).borrowShares;
     (, , uint256 totalBorrowAssets, uint256 totalBorrowShares) = morpho.expectedMarketBalances(_marketParams);
     uint256 maxRepaidAssets = borrowShares.toAssetsDown(totalBorrowAssets, totalBorrowShares);
@@ -358,7 +358,7 @@ contract BaseTest is Test {
   ) internal view returns (uint256) {
     Id _id = _marketParams.id();
 
-    uint256 collateralPrice = IOracle(_marketParams.oracle).price();
+    uint256 collateralPrice = morpho.getPrice(_marketParams);
     uint256 maxRepaidAssets = uint256(morpho.position(_id, borrower).collateral)
       .mulDivDown(collateralPrice, ORACLE_PRICE_SCALE)
       .wDivDown(_liquidationIncentiveFactor(_marketParams.lltv));
@@ -373,7 +373,7 @@ contract BaseTest is Test {
   function _maxBorrow(MarketParams memory _marketParams, address user) internal view returns (uint256) {
     Id _id = _marketParams.id();
 
-    uint256 collateralPrice = IOracle(_marketParams.oracle).price();
+    uint256 collateralPrice = morpho.getPrice(_marketParams);
 
     return
       uint256(morpho.position(_id, user).collateral).mulDivDown(collateralPrice, ORACLE_PRICE_SCALE).wMulDown(
@@ -412,12 +412,12 @@ contract BaseTest is Test {
     return _randomCandidate(users, seed);
   }
 
-  function newMorpho(address admin, address manager) internal returns (IMorpho) {
+  function newMorpho(address admin, address manager, address _oracle) internal returns (IMorpho) {
     Morpho morphoImpl = new Morpho();
 
     ERC1967Proxy morphoProxy = new ERC1967Proxy(
       address(morphoImpl),
-      abi.encodeWithSelector(morphoImpl.initialize.selector, admin, manager)
+      abi.encodeWithSelector(morphoImpl.initialize.selector, admin, manager, _oracle)
     );
 
     return IMorpho(address(morphoProxy));

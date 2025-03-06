@@ -29,7 +29,15 @@ contract AccrueInterestIntegrationTest is BaseTest {
   }
 
   function testAccrueInterestNoTimeElapsed(uint256 amountSupplied, uint256 amountBorrowed) public {
-    uint256 collateralPrice = oracle.price();
+    uint256 collateralPrice = morpho.getPrice(
+      MarketParams({
+        loanToken: address(loanToken),
+        collateralToken: address(collateralToken),
+        oracle: address(oracle),
+        irm: address(irm),
+        lltv: 0
+      })
+    );
     uint256 amountCollateral;
     (amountCollateral, amountBorrowed, ) = _boundHealthyPosition(amountCollateral, amountBorrowed, collateralPrice);
     amountSupplied = bound(amountSupplied, amountBorrowed, MAX_TEST_AMOUNT);
@@ -79,7 +87,15 @@ contract AccrueInterestIntegrationTest is BaseTest {
   }
 
   function testAccrueInterestNoFee(uint256 amountSupplied, uint256 amountBorrowed, uint256 blocks) public {
-    uint256 collateralPrice = oracle.price();
+    uint256 collateralPrice = morpho.getPrice(
+      MarketParams({
+        loanToken: address(loanToken),
+        collateralToken: address(collateralToken),
+        oracle: address(oracle),
+        irm: address(irm),
+        lltv: 0
+      })
+    );
     uint256 amountCollateral;
     (amountCollateral, amountBorrowed, ) = _boundHealthyPosition(amountCollateral, amountBorrowed, collateralPrice);
     amountSupplied = bound(amountSupplied, amountBorrowed, MAX_TEST_AMOUNT);
@@ -137,7 +153,15 @@ contract AccrueInterestIntegrationTest is BaseTest {
   ) public {
     AccrueInterestWithFeesTestParams memory params;
 
-    uint256 collateralPrice = oracle.price();
+    uint256 collateralPrice = morpho.getPrice(
+      MarketParams({
+        loanToken: address(loanToken),
+        collateralToken: address(collateralToken),
+        oracle: address(oracle),
+        irm: address(irm),
+        lltv: 0
+      })
+    );
     uint256 amountCollateral;
     (amountCollateral, amountBorrowed, ) = _boundHealthyPosition(amountCollateral, amountBorrowed, collateralPrice);
     amountSupplied = bound(amountSupplied, amountBorrowed, MAX_TEST_AMOUNT);

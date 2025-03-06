@@ -362,7 +362,7 @@ contract Morpho is UUPSUpgradeable, AccessControlUpgradeable, IMorphoStaticTypin
     _accrueInterest(marketParams, id);
 
     {
-      uint256 collateralPrice = getPrice(marketParams.collateralToken, marketParams.loanToken);
+      uint256 collateralPrice = getPrice(marketParams);
 
       require(!_isHealthy(marketParams, id, borrower, collateralPrice), ErrorsLib.HEALTHY_POSITION);
 
@@ -530,8 +530,7 @@ contract Morpho is UUPSUpgradeable, AccessControlUpgradeable, IMorphoStaticTypin
   /// @dev Assumes that the inputs `marketParams` and `id` match.
   function _isHealthy(MarketParams memory marketParams, Id id, address borrower) internal view returns (bool) {
     if (position[id][borrower].borrowShares == 0) return true;
-
-    uint256 collateralPrice = getPrice(marketParams.collateralToken, marketParams.loanToken);
+    uint256 collateralPrice = getPrice(marketParams);
 
     return _isHealthy(marketParams, id, borrower, collateralPrice);
   }
@@ -557,13 +556,16 @@ contract Morpho is UUPSUpgradeable, AccessControlUpgradeable, IMorphoStaticTypin
     return maxBorrow >= borrowed;
   }
 
-  function getPrice(address baseToken, address quotaToken) private view returns (uint256) {
-    uint256 baseTokenDecimals = IERC20Metadata(baseToken).decimals();
-    uint256 quotaTokenDecimals = IERC20Metadata(quotaToken).decimals();
-    uint256 basePrice = oracle.peek(baseToken);
-    uint256 quotaPrice = oracle.peek(quotaToken);
+  function getPrice(MarketParams memory marketParams) public view returns (uint256) {
+    IOracle _oracle = IOracle(marketParams.oracle);
+    if (address(_oracle) == address(0)) _oracle = oracle;
+    uint256 baseTokenDecimals = IERC20Metadata(marketParams.collateralToken).decimals();
+    uint256 quotaTokenDecimals = IERC20Metadata(marketParams.loanToken).decimals();
+    uint256 basePrice = _oracle.peek(marketParams.collateralToken);
+    uint256 quotaPrice = _oracle.peek(marketParams.loanToken);
 
-    return ORACLE_PRICE_SCALE.mulDivDown(basePrice * 10 ** baseTokenDecimals, quotaPrice * 10 ** quotaTokenDecimals);
+    uint256 scaleFactor = 10 ** (36 + quotaTokenDecimals - baseTokenDecimals);
+    return scaleFactor.mulDivDown(basePrice, quotaPrice);
   }
 
   function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}

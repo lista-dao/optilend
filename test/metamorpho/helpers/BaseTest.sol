@@ -78,7 +78,8 @@ contract BaseTest is Test {
     vm.label(address(oracle), "Oracle");
     vm.label(address(irm), "Irm");
 
-    oracle.setPrice(ORACLE_PRICE_SCALE);
+    oracle.setPrice(address(collateralToken), ORACLE_PRICE_SCALE);
+    oracle.setPrice(address(loanToken), ORACLE_PRICE_SCALE);
 
     irm.setApr(0.5 ether); // 50%.
 
@@ -222,7 +223,7 @@ contract BaseTest is Test {
 
     ERC1967Proxy morphoProxy = new ERC1967Proxy(
       address(morphoImpl),
-      abi.encodeWithSelector(morphoImpl.initialize.selector, admin, manager)
+      abi.encodeWithSelector(morphoImpl.initialize.selector, admin, manager, address(oracle))
     );
 
     return IMorpho(address(morphoProxy));

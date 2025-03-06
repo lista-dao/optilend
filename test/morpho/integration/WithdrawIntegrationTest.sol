@@ -59,7 +59,19 @@ contract WithdrawIntegrationTest is BaseTest {
 
   function testWithdrawInsufficientLiquidity(uint256 amountSupplied, uint256 amountBorrowed) public {
     uint256 amountCollateral;
-    (amountCollateral, amountBorrowed, ) = _boundHealthyPosition(0, amountBorrowed, oracle.price());
+    (amountCollateral, amountBorrowed, ) = _boundHealthyPosition(
+      0,
+      amountBorrowed,
+      morpho.getPrice(
+        MarketParams({
+          loanToken: address(loanToken),
+          collateralToken: address(collateralToken),
+          oracle: address(oracle),
+          irm: address(irm),
+          lltv: 0
+        })
+      )
+    );
     amountSupplied = bound(amountSupplied, amountBorrowed + 1, MAX_TEST_AMOUNT + 1);
 
     loanToken.setBalance(SUPPLIER, amountSupplied);
@@ -81,7 +93,19 @@ contract WithdrawIntegrationTest is BaseTest {
 
   function testWithdrawAssets(uint256 amountSupplied, uint256 amountBorrowed, uint256 amountWithdrawn) public {
     uint256 amountCollateral;
-    (amountCollateral, amountBorrowed, ) = _boundHealthyPosition(0, amountBorrowed, oracle.price());
+    (amountCollateral, amountBorrowed, ) = _boundHealthyPosition(
+      0,
+      amountBorrowed,
+      morpho.getPrice(
+        MarketParams({
+          loanToken: address(loanToken),
+          collateralToken: address(collateralToken),
+          oracle: address(oracle),
+          irm: address(irm),
+          lltv: 0
+        })
+      )
+    );
     vm.assume(amountBorrowed < MAX_TEST_AMOUNT);
     amountSupplied = bound(amountSupplied, amountBorrowed + 1, MAX_TEST_AMOUNT);
     amountWithdrawn = bound(amountWithdrawn, 1, amountSupplied - amountBorrowed);
@@ -122,7 +146,19 @@ contract WithdrawIntegrationTest is BaseTest {
 
   function testWithdrawShares(uint256 amountSupplied, uint256 amountBorrowed, uint256 sharesWithdrawn) public {
     uint256 amountCollateral;
-    (amountCollateral, amountBorrowed, ) = _boundHealthyPosition(0, amountBorrowed, oracle.price());
+    (amountCollateral, amountBorrowed, ) = _boundHealthyPosition(
+      0,
+      amountBorrowed,
+      morpho.getPrice(
+        MarketParams({
+          loanToken: address(loanToken),
+          collateralToken: address(collateralToken),
+          oracle: address(oracle),
+          irm: address(irm),
+          lltv: 0
+        })
+      )
+    );
     amountSupplied = bound(amountSupplied, amountBorrowed, MAX_TEST_AMOUNT);
 
     uint256 expectedSupplyShares = amountSupplied.toSharesDown(0, 0);
@@ -169,7 +205,19 @@ contract WithdrawIntegrationTest is BaseTest {
 
   function testWithdrawAssetsOnBehalf(uint256 amountSupplied, uint256 amountBorrowed, uint256 amountWithdrawn) public {
     uint256 amountCollateral;
-    (amountCollateral, amountBorrowed, ) = _boundHealthyPosition(0, amountBorrowed, oracle.price());
+    (amountCollateral, amountBorrowed, ) = _boundHealthyPosition(
+      0,
+      amountBorrowed,
+      morpho.getPrice(
+        MarketParams({
+          loanToken: address(loanToken),
+          collateralToken: address(collateralToken),
+          oracle: address(oracle),
+          irm: address(irm),
+          lltv: 0
+        })
+      )
+    );
     vm.assume(amountBorrowed < MAX_TEST_AMOUNT);
     amountSupplied = bound(amountSupplied, amountBorrowed + 1, MAX_TEST_AMOUNT);
     amountWithdrawn = bound(amountWithdrawn, 1, amountSupplied - amountBorrowed);
@@ -213,7 +261,19 @@ contract WithdrawIntegrationTest is BaseTest {
 
   function testWithdrawSharesOnBehalf(uint256 amountSupplied, uint256 amountBorrowed, uint256 sharesWithdrawn) public {
     uint256 amountCollateral;
-    (amountCollateral, amountBorrowed, ) = _boundHealthyPosition(0, amountBorrowed, oracle.price());
+    (amountCollateral, amountBorrowed, ) = _boundHealthyPosition(
+      0,
+      amountBorrowed,
+      morpho.getPrice(
+        MarketParams({
+          loanToken: address(loanToken),
+          collateralToken: address(collateralToken),
+          oracle: address(oracle),
+          irm: address(irm),
+          lltv: 0
+        })
+      )
+    );
     amountSupplied = bound(amountSupplied, amountBorrowed, MAX_TEST_AMOUNT);
 
     uint256 expectedSupplyShares = amountSupplied.toSharesDown(0, 0);
