@@ -98,4 +98,7 @@ library ErrorsLib {
 
   /// @notice Thrown when the caller is not the admin.
   string internal constant NOT_ADMIN = "not admin";
+
+  /// @notice Thrown when the caller is not the manager.
+  string internal constant NOT_MANAGER = "not manager";
 }
