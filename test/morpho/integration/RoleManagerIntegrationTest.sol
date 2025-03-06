@@ -10,7 +10,7 @@ contract RoleManagerIntegrationTest is BaseTest {
     Morpho morphoImpl = new Morpho();
 
     vm.expectRevert(bytes(ErrorsLib.ZERO_ADDRESS));
-    ERC1967Proxy morphoProxy = new ERC1967Proxy(
+    new ERC1967Proxy(
       address(morphoImpl),
       abi.encodeWithSelector(morphoImpl.initialize.selector, address(0), address(0))
     );

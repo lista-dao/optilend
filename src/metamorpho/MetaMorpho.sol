@@ -116,7 +116,7 @@ contract MetaMorpho is
   /// @param _asset The address of the underlying asset.
   /// @param _name The name of the vault.
   /// @param _symbol The symbol of the vault.
-  function initalize(
+  function initialize(
     address admin,
     address manager,
     uint256 initialTimelock,
@@ -150,7 +150,7 @@ contract MetaMorpho is
 
   /// @dev Reverts if the caller is not the manager.
   modifier onlyManager() {
-    require(hasRole(MANAGER, _msgSender()), ErrorsLib.NOT_ADMIN);
+    require(hasRole(MANAGER, _msgSender()), ErrorsLib.NOT_MANAGER);
     _;
   }
 
