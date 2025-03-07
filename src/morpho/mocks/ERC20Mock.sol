@@ -5,6 +5,7 @@ import { IERC20 } from "./interfaces/IERC20.sol";
 
 contract ERC20Mock is IERC20 {
   uint256 public totalSupply;
+  uint8 private _decimals;
 
   mapping(address account => uint256) public balanceOf;
   mapping(address account => mapping(address spender => uint256)) public allowance;
@@ -50,7 +51,12 @@ contract ERC20Mock is IERC20 {
     return true;
   }
 
-  function decimals() external pure returns (uint8) {
+  function setDecimals(uint8 d) external {
+    _decimals = d;
+  }
+
+  function decimals() external view returns (uint8) {
+    if (_decimals != 0) return _decimals;
     return 18;
   }
 }
