@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import { Id } from "../../morpho/interfaces/IMorpho.sol";
+import { Id } from "morpho/interfaces/IMorpho.sol";
 
 /// @title ErrorsLib
 /// @author Morpho Labs
@@ -95,4 +95,10 @@ library ErrorsLib {
 
   /// @notice Thrown when all caps have been reached.
   error AllCapsReached();
+
+  /// @notice Thrown when the caller is not the admin.
+  string internal constant NOT_ADMIN = "not admin";
+
+  /// @notice Thrown when the caller is not the manager.
+  string internal constant NOT_MANAGER = "not manager";
 }

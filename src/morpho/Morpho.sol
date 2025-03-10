@@ -15,12 +15,15 @@ import { MathLib, WAD } from "./libraries/MathLib.sol";
 import { SharesMathLib } from "./libraries/SharesMathLib.sol";
 import { MarketParamsLib } from "./libraries/MarketParamsLib.sol";
 import { SafeTransferLib } from "./libraries/SafeTransferLib.sol";
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /// @title Morpho
 /// @author Morpho Labs
 /// @custom:contact security@morpho.org
 /// @notice The Morpho contract.
-contract Morpho is IMorphoStaticTyping {
+contract Morpho is UUPSUpgradeable, AccessControlEnumerableUpgradeable, IMorphoStaticTyping {
   using MathLib for uint128;
   using MathLib for uint256;
   using UtilsLib for uint256;
@@ -35,8 +38,6 @@ contract Morpho is IMorphoStaticTyping {
 
   /* STORAGE */
 
-  /// @inheritdoc IMorphoBase
-  address public owner;
   /// @inheritdoc IMorphoBase
   address public feeRecipient;
   /// @inheritdoc IMorphoStaticTyping
@@ -54,39 +55,51 @@ contract Morpho is IMorphoStaticTyping {
   /// @inheritdoc IMorphoStaticTyping
   mapping(Id => MarketParams) public idToMarketParams;
 
+  IOracle public oracle;
+
+  bytes32 public constant MANAGER = keccak256("MANAGER"); // manager role
+
   /* CONSTRUCTOR */
 
-  /// @param newOwner The new owner of the contract.
-  constructor(address newOwner) {
-    require(newOwner != address(0), ErrorsLib.ZERO_ADDRESS);
-
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  constructor() {
+    _disableInitializers();
     DOMAIN_SEPARATOR = keccak256(abi.encode(DOMAIN_TYPEHASH, block.chainid, address(this)));
-    owner = newOwner;
+  }
 
-    emit EventsLib.SetOwner(newOwner);
+  /// @param admin The new admin of the contract.
+  /// @param manager The new manager of the contract.
+  /// @param _oracle The address of the oracle contract.
+  function initialize(address admin, address manager, address _oracle) public initializer {
+    require(admin != address(0), ErrorsLib.ZERO_ADDRESS);
+    require(manager != address(0), ErrorsLib.ZERO_ADDRESS);
+    require(_oracle != address(0), ErrorsLib.ZERO_ADDRESS);
+
+    __AccessControl_init();
+
+    _grantRole(DEFAULT_ADMIN_ROLE, admin);
+    _grantRole(MANAGER, manager);
+    oracle = IOracle(_oracle);
   }
 
   /* MODIFIERS */
 
-  /// @dev Reverts if the caller is not the owner.
-  modifier onlyOwner() {
-    require(msg.sender == owner, ErrorsLib.NOT_OWNER);
+  /// @dev Reverts if the caller is not the manager.
+  modifier onlyManager() {
+    require(hasRole(MANAGER, msg.sender), ErrorsLib.NOT_MANAGER);
     _;
   }
 
-  /* ONLY OWNER FUNCTIONS */
-
-  /// @inheritdoc IMorphoBase
-  function setOwner(address newOwner) external onlyOwner {
-    require(newOwner != owner, ErrorsLib.ALREADY_SET);
-
-    owner = newOwner;
-
-    emit EventsLib.SetOwner(newOwner);
+  /// @dev Reverts if the caller is not the admin.
+  modifier onlyAdmin() {
+    require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), ErrorsLib.NOT_ADMIN);
+    _;
   }
 
+  /* ONLY MANAGER FUNCTIONS */
+
   /// @inheritdoc IMorphoBase
-  function enableIrm(address irm) external onlyOwner {
+  function enableIrm(address irm) external onlyManager {
     require(!isIrmEnabled[irm], ErrorsLib.ALREADY_SET);
 
     isIrmEnabled[irm] = true;
@@ -95,7 +108,7 @@ contract Morpho is IMorphoStaticTyping {
   }
 
   /// @inheritdoc IMorphoBase
-  function enableLltv(uint256 lltv) external onlyOwner {
+  function enableLltv(uint256 lltv) external onlyManager {
     require(!isLltvEnabled[lltv], ErrorsLib.ALREADY_SET);
     require(lltv < WAD, ErrorsLib.MAX_LLTV_EXCEEDED);
 
@@ -105,7 +118,7 @@ contract Morpho is IMorphoStaticTyping {
   }
 
   /// @inheritdoc IMorphoBase
-  function setFee(MarketParams memory marketParams, uint256 newFee) external onlyOwner {
+  function setFee(MarketParams memory marketParams, uint256 newFee) external onlyManager {
     Id id = marketParams.id();
     require(market[id].lastUpdate != 0, ErrorsLib.MARKET_NOT_CREATED);
     require(newFee != market[id].fee, ErrorsLib.ALREADY_SET);
@@ -121,7 +134,7 @@ contract Morpho is IMorphoStaticTyping {
   }
 
   /// @inheritdoc IMorphoBase
-  function setFeeRecipient(address newFeeRecipient) external onlyOwner {
+  function setFeeRecipient(address newFeeRecipient) external onlyManager {
     require(newFeeRecipient != feeRecipient, ErrorsLib.ALREADY_SET);
 
     feeRecipient = newFeeRecipient;
@@ -132,7 +145,7 @@ contract Morpho is IMorphoStaticTyping {
   /* MARKET CREATION */
 
   /// @inheritdoc IMorphoBase
-  function createMarket(MarketParams memory marketParams) external {
+  function createMarket(MarketParams memory marketParams) external onlyManager {
     Id id = marketParams.id();
     require(isIrmEnabled[marketParams.irm], ErrorsLib.IRM_NOT_ENABLED);
     require(isLltvEnabled[marketParams.lltv], ErrorsLib.LLTV_NOT_ENABLED);
@@ -349,7 +362,7 @@ contract Morpho is IMorphoStaticTyping {
     _accrueInterest(marketParams, id);
 
     {
-      uint256 collateralPrice = IOracle(marketParams.oracle).price();
+      uint256 collateralPrice = getPrice(marketParams);
 
       require(!_isHealthy(marketParams, id, borrower, collateralPrice), ErrorsLib.HEALTHY_POSITION);
 
@@ -517,8 +530,7 @@ contract Morpho is IMorphoStaticTyping {
   /// @dev Assumes that the inputs `marketParams` and `id` match.
   function _isHealthy(MarketParams memory marketParams, Id id, address borrower) internal view returns (bool) {
     if (position[id][borrower].borrowShares == 0) return true;
-
-    uint256 collateralPrice = IOracle(marketParams.oracle).price();
+    uint256 collateralPrice = getPrice(marketParams);
 
     return _isHealthy(marketParams, id, borrower, collateralPrice);
   }
@@ -544,20 +556,17 @@ contract Morpho is IMorphoStaticTyping {
     return maxBorrow >= borrowed;
   }
 
-  /* STORAGE VIEW */
+  function getPrice(MarketParams memory marketParams) public view returns (uint256) {
+    IOracle _oracle = IOracle(marketParams.oracle);
+    if (address(_oracle) == address(0)) _oracle = oracle;
+    uint256 baseTokenDecimals = IERC20Metadata(marketParams.collateralToken).decimals();
+    uint256 quotaTokenDecimals = IERC20Metadata(marketParams.loanToken).decimals();
+    uint256 basePrice = _oracle.peek(marketParams.collateralToken);
+    uint256 quotaPrice = _oracle.peek(marketParams.loanToken);
 
-  /// @inheritdoc IMorphoBase
-  function extSloads(bytes32[] calldata slots) external view returns (bytes32[] memory res) {
-    uint256 nSlots = slots.length;
-
-    res = new bytes32[](nSlots);
-
-    for (uint256 i; i < nSlots; ) {
-      bytes32 slot = slots[i++];
-
-      assembly ("memory-safe") {
-        mstore(add(res, mul(i, 32)), sload(slot))
-      }
-    }
+    uint256 scaleFactor = 10 ** (36 + quotaTokenDecimals - baseTokenDecimals);
+    return scaleFactor.mulDivDown(basePrice, quotaPrice);
   }
+
+  function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 }

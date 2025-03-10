@@ -4,9 +4,13 @@ pragma solidity ^0.8.0;
 import { IOracle } from "../interfaces/IOracle.sol";
 
 contract OracleMock is IOracle {
-  uint256 public price;
+  mapping(address => uint256) public price;
 
-  function setPrice(uint256 newPrice) external {
-    price = newPrice;
+  function peek(address asset) external view returns (uint256) {
+    return price[asset];
+  }
+
+  function setPrice(address asset, uint256 newPrice) external {
+    price[asset] = newPrice;
   }
 }

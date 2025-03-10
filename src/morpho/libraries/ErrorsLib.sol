@@ -9,6 +9,12 @@ library ErrorsLib {
   /// @notice Thrown when the caller is not the owner.
   string internal constant NOT_OWNER = "not owner";
 
+  /// @notice Thrown when the caller is not the manager.
+  string internal constant NOT_MANAGER = "not manager";
+
+  /// @notice Thrown when the caller is not the admin.
+  string internal constant NOT_ADMIN = "not admin";
+
   /// @notice Thrown when the LLTV to enable exceeds the maximum LLTV.
   string internal constant MAX_LLTV_EXCEEDED = "max LLTV exceeded";
 

@@ -1,3 +1,10 @@
 @src/=src
-@openzeppelin/contracts/=lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
 @openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
+morpho=src/morpho
+metamorpho=src/metamorpho
+bot=src/bot
+adaptive-curve-irm=src/adaptive-curve-irm
+public-allocator=src/public-allocator
+@solady=lib/solady/src
+forge-std=lib/forge-std/src

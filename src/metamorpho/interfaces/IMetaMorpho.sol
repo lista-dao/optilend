@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.5.0;
 
-import { IMorpho, Id, MarketParams } from "../../morpho/interfaces/IMorpho.sol";
-import { IERC4626 } from "../../../lib/openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
-import { IERC20Permit } from "../../../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import { IMorpho, Id, MarketParams } from "morpho/interfaces/IMorpho.sol";
+import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
 import { MarketConfig, PendingUint192, PendingAddress } from "../libraries/PendingLib.sol";
 
@@ -19,11 +19,9 @@ interface IMulticall {
 }
 
 interface IOwnable {
-  function owner() external view returns (address);
   function transferOwnership(address) external;
   function renounceOwnership() external;
   function acceptOwnership() external;
-  function pendingOwner() external view returns (address);
 }
 
 /// @dev This interface is used for factorizing IMetaMorphoStaticTyping and IMetaMorpho.
@@ -32,15 +30,6 @@ interface IMetaMorphoBase {
   /// @notice The address of the Morpho contract.
   function MORPHO() external view returns (IMorpho);
   function DECIMALS_OFFSET() external view returns (uint8);
-
-  /// @notice The address of the curator.
-  function curator() external view returns (address);
-
-  /// @notice Stores whether an address is an allocator or not.
-  function isAllocator(address target) external view returns (bool);
-
-  /// @notice The current guardian. Can be set even without the timelock set.
-  function guardian() external view returns (address);
 
   /// @notice The current fee.
   function fee() external view returns (uint96);
@@ -207,4 +196,10 @@ interface IMetaMorpho is IMetaMorphoBase, IERC4626, IERC20Permit, IOwnable, IMul
 
   /// @notice Returns the pending timelock.
   function pendingTimelock() external view returns (PendingUint192 memory);
+
+  /// @notice Returns `true` if `account` has been granted `role`.
+  function hasRole(bytes32 role, address account) external view returns (bool);
+
+  /// @dev Returns the number of accounts that have `role`.
+  function getRoleMemberCount(bytes32 role) external view returns (uint256);
 }

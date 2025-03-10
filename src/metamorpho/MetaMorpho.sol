@@ -2,39 +2,47 @@
 pragma solidity 0.8.24;
 
 import { MarketConfig, PendingUint192, PendingAddress, MarketAllocation, IMetaMorphoBase, IMetaMorphoStaticTyping } from "./interfaces/IMetaMorpho.sol";
-import { Id, MarketParams, Market, IMorpho } from "../morpho/interfaces/IMorpho.sol";
+import { Id, MarketParams, Market, IMorpho } from "morpho/interfaces/IMorpho.sol";
 
 import { PendingUint192, PendingAddress, PendingLib } from "./libraries/PendingLib.sol";
 import { ConstantsLib } from "./libraries/ConstantsLib.sol";
 import { ErrorsLib } from "./libraries/ErrorsLib.sol";
 import { EventsLib } from "./libraries/EventsLib.sol";
-import { WAD } from "../morpho/libraries/MathLib.sol";
-import { UtilsLib } from "../morpho/libraries/UtilsLib.sol";
-import { SafeCast } from "../../lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
-import { SharesMathLib } from "../morpho/libraries/SharesMathLib.sol";
-import { MorphoLib } from "../morpho/libraries/periphery/MorphoLib.sol";
-import { MarketParamsLib } from "../morpho/libraries/MarketParamsLib.sol";
-import { IERC20Metadata } from "../../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { MorphoBalancesLib } from "../morpho/libraries/periphery/MorphoBalancesLib.sol";
+import { WAD } from "morpho/libraries/MathLib.sol";
+import { UtilsLib } from "morpho/libraries/UtilsLib.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { SharesMathLib } from "morpho/libraries/SharesMathLib.sol";
+//import { MorphoLib } from "../morpho/libraries/periphery/MorphoLib.sol";
+import { MarketParamsLib } from "morpho/libraries/MarketParamsLib.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+//import { MorphoBalancesLib } from "../morpho/libraries/periphery/MorphoBalancesLib.sol";
 
-import { Multicall } from "../../lib/openzeppelin-contracts/contracts/utils/Multicall.sol";
-import { Ownable2Step, Ownable } from "../../lib/openzeppelin-contracts/contracts/access/Ownable2Step.sol";
-import { ERC20Permit } from "../../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import { IERC20, IERC4626, ERC20, ERC4626, Math, SafeERC20 } from "../../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC4626.sol";
+import { MulticallUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
+import { ERC20PermitUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import { IERC20, IERC4626, ERC20Upgradeable, ERC4626Upgradeable, Math, SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { MorphoBalancesLib } from "morpho/libraries/periphery/MorphoBalancesLib.sol";
 
 /// @title MetaMorpho
 /// @author Morpho Labs
 /// @custom:contact security@morpho.org
 /// @notice ERC4626 compliant vault allowing users to deposit assets to Morpho.
-contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorphoStaticTyping {
+contract MetaMorpho is
+  UUPSUpgradeable,
+  AccessControlEnumerableUpgradeable,
+  ERC4626Upgradeable,
+  ERC20PermitUpgradeable,
+  MulticallUpgradeable,
+  IMetaMorphoStaticTyping
+{
   using Math for uint256;
   using UtilsLib for uint256;
   using SafeCast for uint256;
   using SafeERC20 for IERC20;
-  using MorphoLib for IMorpho;
   using SharesMathLib for uint256;
-  using MorphoBalancesLib for IMorpho;
   using MarketParamsLib for MarketParams;
+  using MorphoBalancesLib for IMorpho;
   using PendingLib for MarketConfig;
   using PendingLib for PendingUint192;
   using PendingLib for PendingAddress;
@@ -50,15 +58,6 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
   uint8 public immutable DECIMALS_OFFSET;
 
   /* STORAGE */
-
-  /// @inheritdoc IMetaMorphoBase
-  address public curator;
-
-  /// @inheritdoc IMetaMorphoBase
-  mapping(address => bool) public isAllocator;
-
-  /// @inheritdoc IMetaMorphoBase
-  address public guardian;
 
   /// @inheritdoc IMetaMorphoStaticTyping
   mapping(Id => MarketConfig) public config;
@@ -93,40 +92,72 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
   /// @inheritdoc IMetaMorphoBase
   uint256 public lastTotalAssets;
 
+  bytes32 public constant MANAGER = keccak256("MANAGER"); // manager role
+  bytes32 public constant CURATOR = keccak256("CURATOR"); // manager role
+  bytes32 public constant ALLOCATOR = keccak256("ALLOCATOR"); // manager role
+  bytes32 public constant GUARDIAN = keccak256("GUARDIAN"); // manager role
+
   /* CONSTRUCTOR */
 
-  /// @dev Initializes the contract.
-  /// @param owner The owner of the contract.
+  /// @custom:oz-upgrades-unsafe-allow constructor
   /// @param morpho The address of the Morpho contract.
+  /// @param _asset The address of the underlying asset.
+  constructor(address morpho, address _asset) {
+    if (morpho == address(0)) revert ErrorsLib.ZeroAddress();
+    _disableInitializers();
+    MORPHO = IMorpho(morpho);
+    DECIMALS_OFFSET = uint8(uint256(18).zeroFloorSub(IERC20Metadata(_asset).decimals()));
+  }
+
+  /// @dev Initializes the contract.
+  /// @param admin The new admin of the contract.
+  /// @param manager The new manager of the contract.
   /// @param initialTimelock The initial timelock.
   /// @param _asset The address of the underlying asset.
   /// @param _name The name of the vault.
   /// @param _symbol The symbol of the vault.
-  constructor(
-    address owner,
-    address morpho,
+  function initialize(
+    address admin,
+    address manager,
     uint256 initialTimelock,
     address _asset,
     string memory _name,
     string memory _symbol
-  ) ERC4626(IERC20(_asset)) ERC20Permit(_name) ERC20(_name, _symbol) Ownable(owner) {
-    if (morpho == address(0)) revert ErrorsLib.ZeroAddress();
+  ) public initializer {
+    if (admin == address(0)) revert ErrorsLib.ZeroAddress();
+    if (manager == address(0)) revert ErrorsLib.ZeroAddress();
 
-    MORPHO = IMorpho(morpho);
-    DECIMALS_OFFSET = uint8(uint256(18).zeroFloorSub(IERC20Metadata(_asset).decimals()));
+    __ERC4626_init(IERC20(_asset));
+    __ERC20_init(_name, _symbol);
+    __AccessControl_init();
+
+    _grantRole(DEFAULT_ADMIN_ROLE, admin);
+    _grantRole(MANAGER, manager);
 
     _checkTimelockBounds(initialTimelock);
     _setTimelock(initialTimelock);
 
-    IERC20(_asset).forceApprove(morpho, type(uint256).max);
+    IERC20(_asset).forceApprove(address(MORPHO), type(uint256).max);
   }
 
   /* MODIFIERS */
 
+  /// @dev Reverts if the caller is not the admin.
+  modifier onlyAdmin() {
+    require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), ErrorsLib.NOT_ADMIN);
+    _;
+  }
+
+  /// @dev Reverts if the caller is not the manager.
+  modifier onlyManager() {
+    require(hasRole(MANAGER, _msgSender()), ErrorsLib.NOT_MANAGER);
+    _;
+  }
+
   /// @dev Reverts if the caller doesn't have the curator role.
   modifier onlyCuratorRole() {
     address sender = _msgSender();
-    if (sender != curator && sender != owner()) revert ErrorsLib.NotCuratorRole();
+    if (!hasRole(CURATOR, sender) && !hasRole(MANAGER, sender)) revert ErrorsLib.NotCuratorRole();
 
     _;
   }
@@ -134,7 +165,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
   /// @dev Reverts if the caller doesn't have the allocator role.
   modifier onlyAllocatorRole() {
     address sender = _msgSender();
-    if (!isAllocator[sender] && sender != curator && sender != owner()) {
+    if (!hasRole(ALLOCATOR, sender) && !hasRole(CURATOR, sender) && !hasRole(MANAGER, sender)) {
       revert ErrorsLib.NotAllocatorRole();
     }
 
@@ -143,14 +174,16 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
 
   /// @dev Reverts if the caller doesn't have the guardian role.
   modifier onlyGuardianRole() {
-    if (_msgSender() != owner() && _msgSender() != guardian) revert ErrorsLib.NotGuardianRole();
+    address sender = _msgSender();
+    if (!hasRole(MANAGER, sender) && !hasRole(GUARDIAN, sender)) revert ErrorsLib.NotGuardianRole();
 
     _;
   }
 
   /// @dev Reverts if the caller doesn't have the curator nor the guardian role.
   modifier onlyCuratorOrGuardianRole() {
-    if (_msgSender() != guardian && _msgSender() != curator && _msgSender() != owner()) {
+    address sender = _msgSender();
+    if (!hasRole(GUARDIAN, sender) && !hasRole(CURATOR, sender) && !hasRole(MANAGER, sender)) {
       revert ErrorsLib.NotCuratorNorGuardianRole();
     }
 
@@ -168,28 +201,38 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
     _;
   }
 
-  /* ONLY OWNER FUNCTIONS */
+  /* ONLY MANAGER FUNCTIONS */
 
   /// @inheritdoc IMetaMorphoBase
-  function setCurator(address newCurator) external onlyOwner {
-    if (newCurator == curator) revert ErrorsLib.AlreadySet();
+  function setCurator(address newCurator) external onlyManager {
+    if (hasRole(CURATOR, newCurator)) revert ErrorsLib.AlreadySet();
 
-    curator = newCurator;
+    address[] memory accounts = getRoleMembers(CURATOR);
+    if (accounts.length > 0) {
+      for (uint256 i; i < accounts.length; ++i) {
+        _revokeRole(CURATOR, accounts[i]);
+      }
+    }
+    _grantRole(CURATOR, newCurator);
 
     emit EventsLib.SetCurator(newCurator);
   }
 
   /// @inheritdoc IMetaMorphoBase
-  function setIsAllocator(address newAllocator, bool newIsAllocator) external onlyOwner {
-    if (isAllocator[newAllocator] == newIsAllocator) revert ErrorsLib.AlreadySet();
+  function setIsAllocator(address newAllocator, bool newIsAllocator) external onlyManager {
+    if (hasRole(ALLOCATOR, newAllocator) == newIsAllocator) revert ErrorsLib.AlreadySet();
 
-    isAllocator[newAllocator] = newIsAllocator;
+    if (newIsAllocator) {
+      _grantRole(ALLOCATOR, newAllocator);
+    } else {
+      _revokeRole(ALLOCATOR, newAllocator);
+    }
 
     emit EventsLib.SetIsAllocator(newAllocator, newIsAllocator);
   }
 
   /// @inheritdoc IMetaMorphoBase
-  function setSkimRecipient(address newSkimRecipient) external onlyOwner {
+  function setSkimRecipient(address newSkimRecipient) external onlyManager {
     if (newSkimRecipient == skimRecipient) revert ErrorsLib.AlreadySet();
 
     skimRecipient = newSkimRecipient;
@@ -198,7 +241,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
   }
 
   /// @inheritdoc IMetaMorphoBase
-  function submitTimelock(uint256 newTimelock) external onlyOwner {
+  function submitTimelock(uint256 newTimelock) external onlyManager {
     if (newTimelock == timelock) revert ErrorsLib.AlreadySet();
     if (pendingTimelock.validAt != 0) revert ErrorsLib.AlreadyPending();
     _checkTimelockBounds(newTimelock);
@@ -214,7 +257,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
   }
 
   /// @inheritdoc IMetaMorphoBase
-  function setFee(uint256 newFee) external onlyOwner {
+  function setFee(uint256 newFee) external onlyManager {
     if (newFee == fee) revert ErrorsLib.AlreadySet();
     if (newFee > ConstantsLib.MAX_FEE) revert ErrorsLib.MaxFeeExceeded();
     if (newFee != 0 && feeRecipient == address(0)) revert ErrorsLib.ZeroFeeRecipient();
@@ -229,7 +272,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
   }
 
   /// @inheritdoc IMetaMorphoBase
-  function setFeeRecipient(address newFeeRecipient) external onlyOwner {
+  function setFeeRecipient(address newFeeRecipient) external onlyManager {
     if (newFeeRecipient == feeRecipient) revert ErrorsLib.AlreadySet();
     if (newFeeRecipient == address(0) && fee != 0) revert ErrorsLib.ZeroFeeRecipient();
 
@@ -242,12 +285,13 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
   }
 
   /// @inheritdoc IMetaMorphoBase
-  function submitGuardian(address newGuardian) external onlyOwner {
-    if (newGuardian == guardian) revert ErrorsLib.AlreadySet();
+  function submitGuardian(address newGuardian) external onlyManager {
+    if (hasRole(GUARDIAN, newGuardian)) revert ErrorsLib.AlreadySet();
     if (pendingGuardian.validAt != 0) revert ErrorsLib.AlreadyPending();
 
-    if (guardian == address(0)) {
-      _setGuardian(newGuardian);
+    uint256 guardianCount = getRoleMemberCount(GUARDIAN);
+    if (guardianCount == 0) {
+      _grantRole(GUARDIAN, newGuardian);
     } else {
       pendingGuardian.update(newGuardian, timelock);
 
@@ -261,7 +305,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
   function submitCap(MarketParams memory marketParams, uint256 newSupplyCap) external onlyCuratorRole {
     Id id = marketParams.id();
     if (marketParams.loanToken != asset()) revert ErrorsLib.InconsistentAsset(id);
-    if (MORPHO.lastUpdate(id) == 0) revert ErrorsLib.MarketNotCreated();
+    if (MORPHO.market(id).lastUpdate == 0) revert ErrorsLib.MarketNotCreated();
     if (pendingCap[id].validAt != 0) revert ErrorsLib.AlreadyPending();
     if (config[id].removableAt != 0) revert ErrorsLib.PendingRemoval();
     uint256 supplyCap = config[id].cap;
@@ -333,7 +377,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
         if (config[id].cap != 0) revert ErrorsLib.InvalidMarketRemovalNonZeroCap(id);
         if (pendingCap[id].validAt != 0) revert ErrorsLib.PendingCap(id);
 
-        if (MORPHO.supplyShares(id, address(this)) != 0) {
+        if (MORPHO.position(id, address(this)).supplyShares != 0) {
           if (config[id].removableAt == 0) revert ErrorsLib.InvalidMarketRemovalNonZeroSupply(id);
 
           if (block.timestamp < config[id].removableAt) {
@@ -477,11 +521,10 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
     emit EventsLib.Skim(_msgSender(), token, amount);
   }
 
-  /* ERC4626 (PUBLIC) */
+  /* ERC4626Upgradeable (PUBLIC) */
 
-  /// @inheritdoc IERC20Metadata
-  function decimals() public view override(ERC20, ERC4626) returns (uint8) {
-    return ERC4626.decimals();
+  function decimals() public view override(ERC20Upgradeable, ERC4626Upgradeable) returns (uint8) {
+    return ERC4626Upgradeable.decimals();
   }
 
   /// @inheritdoc IERC4626
@@ -575,9 +618,9 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
     }
   }
 
-  /* ERC4626 (INTERNAL) */
+  /* ERC4626Upgradeable (INTERNAL) */
 
-  /// @inheritdoc ERC4626
+  /// @inheritdoc ERC4626Upgradeable
   function _decimalsOffset() internal view override returns (uint8) {
     return DECIMALS_OFFSET;
   }
@@ -603,7 +646,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
       uint256 supplyCap = config[id].cap;
       if (supplyCap == 0) continue;
 
-      uint256 supplyShares = MORPHO.supplyShares(id, address(this));
+      uint256 supplyShares = MORPHO.position(id, address(this)).supplyShares;
       (uint256 totalSupplyAssets, uint256 totalSupplyShares, , ) = MORPHO.expectedMarketBalances(_marketParams(id));
       // `supplyAssets` needs to be rounded up for `totalSuppliable` to be rounded down.
       uint256 supplyAssets = supplyShares.toAssetsUp(totalSupplyAssets, totalSupplyShares);
@@ -612,7 +655,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
     }
   }
 
-  /// @inheritdoc ERC4626
+  /// @inheritdoc ERC4626Upgradeable
   /// @dev The accrual of performance fees is taken into account in the conversion.
   function _convertToShares(uint256 assets, Math.Rounding rounding) internal view override returns (uint256) {
     (uint256 feeShares, uint256 newTotalAssets) = _accruedFeeShares();
@@ -620,7 +663,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
     return _convertToSharesWithTotals(assets, totalSupply() + feeShares, newTotalAssets, rounding);
   }
 
-  /// @inheritdoc ERC4626
+  /// @inheritdoc ERC4626Upgradeable
   /// @dev The accrual of performance fees is taken into account in the conversion.
   function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
     (uint256 feeShares, uint256 newTotalAssets) = _accruedFeeShares();
@@ -650,7 +693,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
     return shares.mulDiv(newTotalAssets + 1, newTotalSupply + 10 ** _decimalsOffset(), rounding);
   }
 
-  /// @inheritdoc ERC4626
+  /// @inheritdoc ERC4626Upgradeable
   /// @dev Used in mint or deposit to deposit the underlying asset to Morpho markets.
   function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
     super._deposit(caller, receiver, assets, shares);
@@ -661,7 +704,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
     _updateLastTotalAssets(lastTotalAssets + assets);
   }
 
-  /// @inheritdoc ERC4626
+  /// @inheritdoc ERC4626Upgradeable
   /// @dev Used in redeem or withdraw to withdraw the underlying asset from Morpho markets.
   /// @dev Depending on 3 cases, reverts when withdrawing "too much" with:
   /// 1. NotEnoughLiquidity when withdrawing more than available liquidity.
@@ -696,7 +739,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
     MORPHO.accrueInterest(marketParams);
 
     market = MORPHO.market(id);
-    shares = MORPHO.supplyShares(id, address(this));
+    shares = MORPHO.position(id, address(this)).supplyShares;
     assets = shares.toAssetsDown(market.totalSupplyAssets, market.totalSupplyShares);
   }
 
@@ -717,7 +760,14 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
 
   /// @dev Sets `guardian` to `newGuardian`.
   function _setGuardian(address newGuardian) internal {
-    guardian = newGuardian;
+    address[] memory accounts = getRoleMembers(GUARDIAN);
+    if (accounts.length > 0) {
+      for (uint256 i; i < accounts.length; ++i) {
+        _revokeRole(GUARDIAN, accounts[i]);
+      }
+    }
+
+    _grantRole(GUARDIAN, newGuardian);
 
     emit EventsLib.SetGuardian(_msgSender(), newGuardian);
 
@@ -768,7 +818,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
       MORPHO.accrueInterest(marketParams);
 
       Market memory market = MORPHO.market(id);
-      uint256 supplyShares = MORPHO.supplyShares(id, address(this));
+      uint256 supplyShares = MORPHO.position(id, address(this)).supplyShares;
       // `supplyAssets` needs to be rounded up for `toSupply` to be rounded down.
       uint256 supplyAssets = supplyShares.toAssetsUp(market.totalSupplyAssets, market.totalSupplyShares);
 
@@ -819,7 +869,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
       Id id = withdrawQueue[i];
       MarketParams memory marketParams = _marketParams(id);
 
-      uint256 supplyShares = MORPHO.supplyShares(id, address(this));
+      uint256 supplyShares = MORPHO.position(id, address(this)).supplyShares;
       (uint256 totalSupplyAssets, uint256 totalSupplyShares, uint256 totalBorrowAssets, ) = MORPHO
         .expectedMarketBalances(marketParams);
 
@@ -853,7 +903,7 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
     // Inside a flashloan callback, liquidity on Morpho Blue may be limited to the singleton's balance.
     uint256 availableLiquidity = UtilsLib.min(
       totalSupplyAssets - totalBorrowAssets,
-      ERC20(marketParams.loanToken).balanceOf(address(MORPHO))
+      ERC20Upgradeable(marketParams.loanToken).balanceOf(address(MORPHO))
     );
 
     return UtilsLib.min(supplyAssets, availableLiquidity);
@@ -893,4 +943,6 @@ contract MetaMorpho is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorph
       feeShares = _convertToSharesWithTotals(feeAssets, totalSupply(), newTotalAssets - feeAssets, Math.Rounding.Floor);
     }
   }
+
+  function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 }
