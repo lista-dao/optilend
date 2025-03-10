@@ -81,6 +81,8 @@ contract IntegrationTest is BaseTest {
   }
 
   function _setGuardian(address newGuardian) internal {
+    bool haveSetGuardian = vault.getRoleMemberCount(GUARDIAN_ROLE) > 0;
+
     if (vault.hasRole(GUARDIAN_ROLE, newGuardian)) return;
 
     PendingAddress memory pendingGuardian = vault.pendingGuardian();
@@ -88,6 +90,8 @@ contract IntegrationTest is BaseTest {
       vm.prank(OWNER);
       vault.submitGuardian(newGuardian);
     }
+
+    if (!haveSetGuardian) return;
 
     vm.warp(block.timestamp + vault.timelock());
 

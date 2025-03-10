@@ -199,4 +199,7 @@ interface IMetaMorpho is IMetaMorphoBase, IERC4626, IERC20Permit, IOwnable, IMul
 
   /// @notice Returns `true` if `account` has been granted `role`.
   function hasRole(bytes32 role, address account) external view returns (bool);
+
+  /// @dev Returns the number of accounts that have `role`.
+  function getRoleMemberCount(bytes32 role) external view returns (uint256);
 }

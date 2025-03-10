@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity 0.8.24;
 
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { FlowCaps, FlowCapsConfig, Withdrawal, MAX_SETTABLE_FLOW_CAP, IPublicAllocatorStaticTyping, IPublicAllocatorBase } from "./interfaces/IPublicAllocator.sol";
 import { Id, IMorpho, IMetaMorpho, MarketAllocation, MarketParams } from "metamorpho/interfaces/IMetaMorpho.sol";
@@ -17,7 +17,7 @@ import { MorphoBalancesLib } from "morpho/libraries/periphery/MorphoBalancesLib.
 /// @author Morpho Labs
 /// @custom:contact security@morpho.org
 /// @notice Publicly callable allocator for MetaMorpho vaults.
-contract PublicAllocator is UUPSUpgradeable, AccessControlUpgradeable, IPublicAllocatorStaticTyping {
+contract PublicAllocator is UUPSUpgradeable, AccessControlEnumerableUpgradeable, IPublicAllocatorStaticTyping {
   using MorphoBalancesLib for IMorpho;
   using MarketParamsLib for MarketParams;
   using UtilsLib for uint256;

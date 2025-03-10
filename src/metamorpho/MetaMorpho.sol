@@ -20,7 +20,7 @@ import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/I
 import { MulticallUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
 import { ERC20PermitUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import { IERC20, IERC4626, ERC20Upgradeable, ERC4626Upgradeable, Math, SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { MorphoBalancesLib } from "morpho/libraries/periphery/MorphoBalancesLib.sol";
 
@@ -30,7 +30,7 @@ import { MorphoBalancesLib } from "morpho/libraries/periphery/MorphoBalancesLib.
 /// @notice ERC4626 compliant vault allowing users to deposit assets to Morpho.
 contract MetaMorpho is
   UUPSUpgradeable,
-  AccessControlUpgradeable,
+  AccessControlEnumerableUpgradeable,
   ERC4626Upgradeable,
   ERC20PermitUpgradeable,
   MulticallUpgradeable,
@@ -207,6 +207,12 @@ contract MetaMorpho is
   function setCurator(address newCurator) external onlyManager {
     if (hasRole(CURATOR, newCurator)) revert ErrorsLib.AlreadySet();
 
+    address[] memory accounts = getRoleMembers(CURATOR);
+    if (accounts.length > 0) {
+      for (uint256 i; i < accounts.length; ++i) {
+        _revokeRole(CURATOR, accounts[i]);
+      }
+    }
     _grantRole(CURATOR, newCurator);
 
     emit EventsLib.SetCurator(newCurator);
@@ -283,9 +289,14 @@ contract MetaMorpho is
     if (hasRole(GUARDIAN, newGuardian)) revert ErrorsLib.AlreadySet();
     if (pendingGuardian.validAt != 0) revert ErrorsLib.AlreadyPending();
 
-    pendingGuardian.update(newGuardian, timelock);
+    uint256 guardianCount = getRoleMemberCount(GUARDIAN);
+    if (guardianCount == 0) {
+      _grantRole(GUARDIAN, newGuardian);
+    } else {
+      pendingGuardian.update(newGuardian, timelock);
 
-    emit EventsLib.SubmitGuardian(newGuardian);
+      emit EventsLib.SubmitGuardian(newGuardian);
+    }
   }
 
   /* ONLY CURATOR FUNCTIONS */
@@ -749,6 +760,13 @@ contract MetaMorpho is
 
   /// @dev Sets `guardian` to `newGuardian`.
   function _setGuardian(address newGuardian) internal {
+    address[] memory accounts = getRoleMembers(GUARDIAN);
+    if (accounts.length > 0) {
+      for (uint256 i; i < accounts.length; ++i) {
+        _revokeRole(GUARDIAN, accounts[i]);
+      }
+    }
+
     _grantRole(GUARDIAN, newGuardian);
 
     emit EventsLib.SetGuardian(_msgSender(), newGuardian);

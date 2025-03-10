@@ -12,13 +12,13 @@ import { ConstantsLib } from "./libraries/ConstantsLib.sol";
 import { MarketParamsLib } from "../morpho/libraries/MarketParamsLib.sol";
 import { Id, MarketParams, Market } from "morpho/interfaces/IMorpho.sol";
 import { MathLib as MorphoMathLib } from "morpho/libraries/MathLib.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
 /// @title AdaptiveCurveIrm
 /// @author Morpho Labs
 /// @custom:contact security@morpho.org
-contract AdaptiveCurveIrm is UUPSUpgradeable, AccessControlUpgradeable, IAdaptiveCurveIrm {
+contract AdaptiveCurveIrm is UUPSUpgradeable, AccessControlEnumerableUpgradeable, IAdaptiveCurveIrm {
   using MathLib for int256;
   using UtilsLib for int256;
   using MorphoMathLib for uint128;
@@ -39,8 +39,6 @@ contract AdaptiveCurveIrm is UUPSUpgradeable, AccessControlUpgradeable, IAdaptiv
   /// @inheritdoc IAdaptiveCurveIrm
   mapping(Id => int256) public rateAtTarget;
 
-  bytes32 public constant MANAGER = keccak256("MANAGER"); // manager role
-
   /* CONSTRUCTOR */
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -53,15 +51,12 @@ contract AdaptiveCurveIrm is UUPSUpgradeable, AccessControlUpgradeable, IAdaptiv
 
   /// @notice Constructor.
   /// @param admin The new admin of the contract.
-  /// @param manager The new manager of the contract.
-  function initialize(address admin, address manager) public initializer {
+  function initialize(address admin) public initializer {
     require(admin != address(0), ErrorsLib.ZERO_ADDRESS);
-    require(manager != address(0), ErrorsLib.ZERO_ADDRESS);
 
     __AccessControl_init();
 
     _grantRole(DEFAULT_ADMIN_ROLE, admin);
-    _grantRole(MANAGER, manager);
   }
 
   /* MODIFIERS */

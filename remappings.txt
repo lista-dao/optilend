@@ -8,4 +8,3 @@ adaptive-curve-irm=src/adaptive-curve-irm
 public-allocator=src/public-allocator
 @solady=lib/solady/src
 forge-std=lib/forge-std/src
-solmate=lib/solmate/src

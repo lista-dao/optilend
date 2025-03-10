@@ -216,7 +216,7 @@ contract TimelockTest is IntegrationTest {
 
     PendingAddress memory pendingGuardian = vault.pendingGuardian();
 
-    assertTrue(vault.hasRole(GUARDIAN_ROLE, GUARDIAN_ADDR), "newGuardian");
+    assertTrue(vault.hasRole(GUARDIAN_ROLE, guardian), "newGuardian");
     assertEq(pendingGuardian.value, address(0), "pendingGuardian.value");
     assertEq(pendingGuardian.validAt, 0, "pendingGuardian.validAt");
   }
@@ -240,7 +240,7 @@ contract TimelockTest is IntegrationTest {
 
     PendingAddress memory pendingGuardian = vault.pendingGuardian();
 
-    assertTrue(vault.hasRole(GUARDIAN_ROLE, GUARDIAN_ADDR), "newGuardian");
+    assertTrue(vault.hasRole(GUARDIAN_ROLE, guardian), "newGuardian");
     assertEq(pendingGuardian.value, address(0), "pendingGuardian.value");
     assertEq(pendingGuardian.validAt, 0, "pendingGuardian.validAt");
   }
