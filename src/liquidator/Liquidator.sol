@@ -88,7 +88,7 @@ contract Liquidator is UUPSUpgradeable, AccessControlUpgradeable, ILiquidator {
     );
   }
 
-  function onMorphoLiquidate(uint256 repaidAssets, bytes calldata data) external onlyMoolah {
+  function onMoolahLiquidate(uint256 repaidAssets, bytes calldata data) external onlyMoolah {
     MoolahLiquidateData memory arb = abi.decode(data, (MoolahLiquidateData));
     (bool success, ) = arb.pair.call(arb.swapData);
     if (!success) revert("swap error");
