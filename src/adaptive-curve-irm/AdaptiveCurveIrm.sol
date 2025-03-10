@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import { IIrm } from "../morpho/interfaces/IIrm.sol";
+import { IIrm } from "morpho/interfaces/IIrm.sol";
 import { IAdaptiveCurveIrm } from "./interfaces/IAdaptiveCurveIrm.sol";
 
 import { UtilsLib } from "./libraries/UtilsLib.sol";
@@ -10,13 +10,15 @@ import { ExpLib } from "./libraries/ExpLib.sol";
 import { MathLib, WAD_INT as WAD } from "./libraries/MathLib.sol";
 import { ConstantsLib } from "./libraries/ConstantsLib.sol";
 import { MarketParamsLib } from "../morpho/libraries/MarketParamsLib.sol";
-import { Id, MarketParams, Market } from "../morpho/interfaces/IMorpho.sol";
-import { MathLib as MorphoMathLib } from "../morpho/libraries/MathLib.sol";
+import { Id, MarketParams, Market } from "morpho/interfaces/IMorpho.sol";
+import { MathLib as MorphoMathLib } from "morpho/libraries/MathLib.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
 /// @title AdaptiveCurveIrm
 /// @author Morpho Labs
 /// @custom:contact security@morpho.org
-contract AdaptiveCurveIrm is IAdaptiveCurveIrm {
+contract AdaptiveCurveIrm is UUPSUpgradeable, AccessControlEnumerableUpgradeable, IAdaptiveCurveIrm {
   using MathLib for int256;
   using UtilsLib for int256;
   using MorphoMathLib for uint128;
@@ -39,12 +41,30 @@ contract AdaptiveCurveIrm is IAdaptiveCurveIrm {
 
   /* CONSTRUCTOR */
 
-  /// @notice Constructor.
-  /// @param morpho The address of Morpho.
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  /// @param morpho The address of the Morpho contract.
   constructor(address morpho) {
     require(morpho != address(0), ErrorsLib.ZERO_ADDRESS);
-
+    _disableInitializers();
     MORPHO = morpho;
+  }
+
+  /// @notice Constructor.
+  /// @param admin The new admin of the contract.
+  function initialize(address admin) public initializer {
+    require(admin != address(0), ErrorsLib.ZERO_ADDRESS);
+
+    __AccessControl_init();
+
+    _grantRole(DEFAULT_ADMIN_ROLE, admin);
+  }
+
+  /* MODIFIERS */
+
+  /// @dev Reverts if the caller is not the admin.
+  modifier onlyAdmin() {
+    require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), ErrorsLib.NOT_ADMIN);
+    _;
   }
 
   /* BORROW RATES */
@@ -151,4 +171,6 @@ contract AdaptiveCurveIrm is IAdaptiveCurveIrm {
         ConstantsLib.MAX_RATE_AT_TARGET
       );
   }
+
+  function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 }

@@ -1,5 +1,4 @@
 node_modules
-lib/
 .idea
 
 # Compiler files
@@ -18,4 +17,3 @@ out/
 # Ignore macOS .DS_Store files
 .DS_Store
 
-lib/

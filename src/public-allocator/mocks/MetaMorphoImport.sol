@@ -4,4 +4,4 @@ pragma solidity 0.8.24;
 // MetaMorpho will be compiled with its own solidity version.
 // The resulting bytecode is then loaded by the tests.
 
-import "../../metamorpho/MetaMorpho.sol";
+import "metamorpho/MetaMorpho.sol";

@@ -54,12 +54,6 @@ interface IMorphoBase {
   /// same chain id and on forks because the domain separator would be the same.
   function DOMAIN_SEPARATOR() external view returns (bytes32);
 
-  /// @notice The owner of the contract.
-  /// @dev It has the power to change the owner.
-  /// @dev It has the power to set fees on markets and set the fee recipient.
-  /// @dev It has the power to enable but not disable IRMs and LLTVs.
-  function owner() external view returns (address);
-
   /// @notice The fee recipient of all markets.
   /// @dev The recipient receives the fees of a given market through a supply position on that market.
   function feeRecipient() external view returns (address);
@@ -76,11 +70,6 @@ interface IMorphoBase {
 
   /// @notice The `authorizer`'s current nonce. Used to prevent replay attacks with EIP-712 signatures.
   function nonce(address authorizer) external view returns (uint256);
-
-  /// @notice Sets `newOwner` as `owner` of the contract.
-  /// @dev Warning: No two-step transfer ownership.
-  /// @dev Warning: The owner can be set to the zero address.
-  function setOwner(address newOwner) external;
 
   /// @notice Enables `irm` as a possible IRM for market creation.
   /// @dev Warning: It is not possible to disable an IRM.
@@ -297,7 +286,7 @@ interface IMorphoBase {
   function accrueInterest(MarketParams memory marketParams) external;
 
   /// @notice Returns the data stored on the different `slots`.
-  function extSloads(bytes32[] memory slots) external view returns (bytes32[] memory);
+  //  function extSloads(bytes32[] memory slots) external view returns (bytes32[] memory);
 }
 
 /// @dev This interface is inherited by Morpho so that function signatures are checked by the compiler.
@@ -359,4 +348,6 @@ interface IMorpho is IMorphoBase {
   /// @dev This mapping is not used in Morpho. It is there to enable reducing the cost associated to calldata on layer
   /// 2s by creating a wrapper contract with functions that take `id` as input instead of `marketParams`.
   function idToMarketParams(Id id) external view returns (MarketParams memory);
+
+  function getPrice(MarketParams calldata marketParams) external view returns (uint256);
 }

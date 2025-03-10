@@ -4,4 +4,4 @@ pragma solidity 0.8.24;
 // Morpho Blue will be compiled with its own solidity version.
 // The resulting bytecode is then loaded by BaseTest.sol.
 
-import "../../morpho/Morpho.sol";
+import "morpho/Morpho.sol";

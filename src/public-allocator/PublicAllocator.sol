@@ -1,21 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity 0.8.24;
 
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { FlowCaps, FlowCapsConfig, Withdrawal, MAX_SETTABLE_FLOW_CAP, IPublicAllocatorStaticTyping, IPublicAllocatorBase } from "./interfaces/IPublicAllocator.sol";
-import { Id, IMorpho, IMetaMorpho, MarketAllocation, MarketParams } from "../metamorpho/interfaces/IMetaMorpho.sol";
-import { Market } from "../morpho/interfaces/IMorpho.sol";
+import { Id, IMorpho, IMetaMorpho, MarketAllocation, MarketParams } from "metamorpho/interfaces/IMetaMorpho.sol";
+import { Market } from "morpho/interfaces/IMorpho.sol";
 
 import { ErrorsLib } from "./libraries/ErrorsLib.sol";
 import { EventsLib } from "./libraries/EventsLib.sol";
-import { UtilsLib } from "../morpho/libraries/UtilsLib.sol";
-import { MarketParamsLib } from "../morpho/libraries/MarketParamsLib.sol";
-import { MorphoBalancesLib } from "../morpho/libraries/periphery/MorphoBalancesLib.sol";
+import { UtilsLib } from "morpho/libraries/UtilsLib.sol";
+import { MarketParamsLib } from "morpho/libraries/MarketParamsLib.sol";
+import { MorphoBalancesLib } from "morpho/libraries/periphery/MorphoBalancesLib.sol";
 
 /// @title PublicAllocator
 /// @author Morpho Labs
 /// @custom:contact security@morpho.org
 /// @notice Publicly callable allocator for MetaMorpho vaults.
-contract PublicAllocator is IPublicAllocatorStaticTyping {
+contract PublicAllocator is UUPSUpgradeable, AccessControlEnumerableUpgradeable, IPublicAllocatorStaticTyping {
   using MorphoBalancesLib for IMorpho;
   using MarketParamsLib for MarketParams;
   using UtilsLib for uint256;
@@ -36,11 +38,13 @@ contract PublicAllocator is IPublicAllocatorStaticTyping {
   /// @inheritdoc IPublicAllocatorStaticTyping
   mapping(address => mapping(Id => FlowCaps)) public flowCaps;
 
+  bytes32 public constant MANAGER = keccak256("MANAGER"); // manager role
+
   /* MODIFIER */
 
   /// @dev Reverts if the caller is not the admin nor the owner of this vault.
   modifier onlyAdminOrVaultOwner(address vault) {
-    if (msg.sender != admin[vault] && msg.sender != IMetaMorpho(vault).owner()) {
+    if (msg.sender != admin[vault] && !IMetaMorpho(vault).hasRole(MANAGER, msg.sender)) {
       revert ErrorsLib.NotAdminNorVaultOwner();
     }
     _;
@@ -48,9 +52,25 @@ contract PublicAllocator is IPublicAllocatorStaticTyping {
 
   /* CONSTRUCTOR */
 
-  /// @dev Initializes the contract.
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  /// @param morpho The address of the Morpho contract.
   constructor(address morpho) {
+    require(morpho != address(0), ErrorsLib.ZERO_ADDRESS);
+    _disableInitializers();
     MORPHO = IMorpho(morpho);
+  }
+
+  /// @dev Initializes the contract.
+  /// @param _admin The new admin of the contract.
+  /// @param _manager The new manager of the contract.
+  function initialize(address _admin, address _manager) public initializer {
+    require(_admin != address(0), ErrorsLib.ZERO_ADDRESS);
+    require(_manager != address(0), ErrorsLib.ZERO_ADDRESS);
+
+    __AccessControl_init();
+
+    _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+    _grantRole(MANAGER, _manager);
   }
 
   /* ADMIN OR VAULT OWNER ONLY */
@@ -151,4 +171,6 @@ contract PublicAllocator is IPublicAllocatorStaticTyping {
 
     emit EventsLib.PublicReallocateTo(msg.sender, vault, supplyMarketId, totalWithdrawn);
   }
+
+  function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 }
