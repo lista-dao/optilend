@@ -2,9 +2,9 @@
 pragma solidity ^0.8.13;
 
 import "./IBot.sol";
-import { SafeTransferLib } from "../../lib/solady/src/utils/SafeTransferLib.sol";
-import { AccessControlUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
-import { UUPSUpgradeable } from "../../lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 contract Bot is UUPSUpgradeable, AccessControlUpgradeable, IBot {
   /// @dev Thrown when passing the zero address.

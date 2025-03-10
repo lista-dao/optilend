@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import "../../../lib/forge-std/src/Test.sol";
+import "forge-std/Test.sol";
 
-import "../../../src/morpho/libraries/ErrorsLib.sol";
-import "../../../src/morpho/libraries/UtilsLib.sol";
+import "morpho/libraries/ErrorsLib.sol";
+import "morpho/libraries/UtilsLib.sol";
 
 contract UtilsLibTest is Test {
   using UtilsLib for uint256;

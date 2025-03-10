@@ -3,12 +3,12 @@ pragma solidity ^0.8.13;
 
 import { Test, console } from "forge-std/Test.sol";
 import { IntegrationTest, MarketAllocation, MarketParamsLib, MarketParams, IMorpho, Id, stdError } from "../metamorpho/helpers/IntegrationTest.sol";
-import { PublicAllocator, FlowCapsConfig, Withdrawal, FlowCaps } from "../../src/public-allocator/PublicAllocator.sol";
-import { ErrorsLib } from "../../src/public-allocator/libraries/ErrorsLib.sol";
-import { EventsLib } from "../../src/public-allocator/libraries/EventsLib.sol";
-import { UtilsLib } from "../../src/morpho/libraries/UtilsLib.sol";
-import { IPublicAllocator, MAX_SETTABLE_FLOW_CAP } from "../../src/public-allocator/interfaces/IPublicAllocator.sol";
-import { MorphoBalancesLib } from "../../src/morpho/libraries/periphery/MorphoBalancesLib.sol";
+import { PublicAllocator, FlowCapsConfig, Withdrawal, FlowCaps } from "public-allocator/PublicAllocator.sol";
+import { ErrorsLib } from "public-allocator/libraries/ErrorsLib.sol";
+import { EventsLib } from "public-allocator/libraries/EventsLib.sol";
+import { UtilsLib } from "morpho/libraries/UtilsLib.sol";
+import { IPublicAllocator, MAX_SETTABLE_FLOW_CAP } from "public-allocator/interfaces/IPublicAllocator.sol";
+import { MorphoBalancesLib } from "morpho/libraries/periphery/MorphoBalancesLib.sol";
 
 uint256 constant CAP2 = 100e18;
 uint256 constant INITIAL_DEPOSIT = 4 * CAP2;

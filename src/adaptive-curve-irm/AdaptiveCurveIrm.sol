@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import { IIrm } from "../morpho/interfaces/IIrm.sol";
+import { IIrm } from "morpho/interfaces/IIrm.sol";
 import { IAdaptiveCurveIrm } from "./interfaces/IAdaptiveCurveIrm.sol";
 
 import { UtilsLib } from "./libraries/UtilsLib.sol";
@@ -10,10 +10,10 @@ import { ExpLib } from "./libraries/ExpLib.sol";
 import { MathLib, WAD_INT as WAD } from "./libraries/MathLib.sol";
 import { ConstantsLib } from "./libraries/ConstantsLib.sol";
 import { MarketParamsLib } from "../morpho/libraries/MarketParamsLib.sol";
-import { Id, MarketParams, Market } from "../morpho/interfaces/IMorpho.sol";
-import { MathLib as MorphoMathLib } from "../morpho/libraries/MathLib.sol";
-import { AccessControlUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
-import { UUPSUpgradeable } from "../../lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { Id, MarketParams, Market } from "morpho/interfaces/IMorpho.sol";
+import { MathLib as MorphoMathLib } from "morpho/libraries/MathLib.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title AdaptiveCurveIrm
 /// @author Morpho Labs

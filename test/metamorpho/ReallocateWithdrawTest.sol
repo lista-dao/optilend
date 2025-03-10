@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import { UtilsLib } from "../../src/morpho/libraries/UtilsLib.sol";
-import { SharesMathLib } from "../../src/morpho/libraries/SharesMathLib.sol";
+import { UtilsLib } from "morpho/libraries/UtilsLib.sol";
+import { SharesMathLib } from "morpho/libraries/SharesMathLib.sol";
 
 import "./helpers/IntegrationTest.sol";
 

@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import "../../lib/forge-std/src/Test.sol";
-import "../../lib/forge-std/src/console.sol";
+import "forge-std/Test.sol";
+import "forge-std/console.sol";
 
-import { IMorpho } from "../../src/morpho/interfaces/IMorpho.sol";
-import "../../src/morpho/interfaces/IMorphoCallbacks.sol";
-import { IrmMock } from "../../src/morpho/mocks/IrmMock.sol";
-import { ERC20Mock } from "../../src/morpho/mocks/ERC20Mock.sol";
-import { OracleMock } from "../../src/morpho/mocks/OracleMock.sol";
+import { IMorpho } from "morpho/interfaces/IMorpho.sol";
+import "morpho/interfaces/IMorphoCallbacks.sol";
+import { IrmMock } from "morpho/mocks/IrmMock.sol";
+import { ERC20Mock } from "morpho/mocks/ERC20Mock.sol";
+import { OracleMock } from "morpho/mocks/OracleMock.sol";
 
-import "../../src/morpho/Morpho.sol";
+import "morpho/Morpho.sol";
 import { Math } from "./helpers/Math.sol";
 import { SigUtils } from "./helpers/SigUtils.sol";
 import { ArrayLib } from "./helpers/ArrayLib.sol";
-import { MorphoBalancesLib } from "../../src/morpho/libraries/periphery/MorphoBalancesLib.sol";
-import { ERC1967Proxy } from "../../lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { IAccessControl } from "../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
+import { MorphoBalancesLib } from "morpho/libraries/periphery/MorphoBalancesLib.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 contract BaseTest is Test {
   using Math for uint256;

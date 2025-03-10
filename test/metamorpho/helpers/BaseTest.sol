@@ -1,34 +1,32 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import "../../../src/morpho/interfaces/IMorpho.sol";
+import "morpho/interfaces/IMorpho.sol";
 
-import { WAD, MathLib } from "../../../src/morpho/libraries/MathLib.sol";
-import { Math } from "../../../lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
-import { MarketParamsLib } from "../../../src/morpho/libraries/MarketParamsLib.sol";
-import { MorphoBalancesLib } from "../../../src/morpho/libraries/periphery/MorphoBalancesLib.sol";
+import { WAD, MathLib } from "morpho/libraries/MathLib.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { MarketParamsLib } from "morpho/libraries/MarketParamsLib.sol";
+import { MorphoBalancesLib } from "morpho/libraries/periphery/MorphoBalancesLib.sol";
 
-import "../../../src/metamorpho/interfaces/IMetaMorpho.sol";
+import "metamorpho/interfaces/IMetaMorpho.sol";
+import { ErrorsLib } from "metamorpho/libraries/ErrorsLib.sol";
+import { EventsLib } from "metamorpho/libraries/EventsLib.sol";
+import { ORACLE_PRICE_SCALE } from "morpho/libraries/ConstantsLib.sol";
+import { ConstantsLib } from "metamorpho/libraries/ConstantsLib.sol";
 
-import "../../../src/metamorpho/interfaces/IMetaMorpho.sol";
-import { ErrorsLib } from "../../../src/metamorpho/libraries/ErrorsLib.sol";
-import { EventsLib } from "../../../src/metamorpho/libraries/EventsLib.sol";
-import { ORACLE_PRICE_SCALE } from "../../../src/morpho/libraries/ConstantsLib.sol";
-import { ConstantsLib } from "../../../src/metamorpho/libraries/ConstantsLib.sol";
+import { IrmMock } from "metamorpho/mocks/IrmMock.sol";
+import { ERC20Mock } from "metamorpho/mocks/ERC20Mock.sol";
+import { OracleMock } from "metamorpho/mocks/OracleMock.sol";
 
-import { IrmMock } from "../../../src/metamorpho/mocks/IrmMock.sol";
-import { ERC20Mock } from "../../../src/metamorpho/mocks/ERC20Mock.sol";
-import { OracleMock } from "../../../src/metamorpho/mocks/OracleMock.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
-import { Ownable } from "../../../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import { IERC20, ERC20 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 
-import { IERC20, ERC20 } from "../../../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC4626.sol";
-
-import "../../../lib/forge-std/src/Test.sol";
-import "../../../lib/forge-std/src/console2.sol";
-import { MetaMorpho } from "../../../src/metamorpho/MetaMorpho.sol";
-import { ERC1967Proxy } from "../../../lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { Morpho } from "../../../src/morpho/Morpho.sol";
+import "forge-std/Test.sol";
+import "forge-std/console2.sol";
+import { MetaMorpho } from "metamorpho/MetaMorpho.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { Morpho } from "morpho/Morpho.sol";
 
 uint256 constant BLOCK_TIME = 1;
 uint256 constant MIN_TEST_ASSETS = 1e8;

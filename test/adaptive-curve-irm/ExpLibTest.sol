@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { MathLib, WAD_INT } from "../../src/adaptive-curve-irm/libraries/MathLib.sol";
-import { ExpLib } from "../../src/adaptive-curve-irm/libraries/ExpLib.sol";
-import { wadExp } from "../../lib/solmate/src/utils/SignedWadMath.sol";
-import { ConstantsLib } from "../../src/adaptive-curve-irm/libraries/ConstantsLib.sol";
-import { MathLib as MorphoMathLib } from "../../src/morpho/libraries/MathLib.sol";
+import { MathLib, WAD_INT } from "adaptive-curve-irm/libraries/MathLib.sol";
+import { ExpLib } from "adaptive-curve-irm/libraries/ExpLib.sol";
+import { wadExp } from "solmate/utils/SignedWadMath.sol";
+import { ConstantsLib } from "adaptive-curve-irm/libraries/ConstantsLib.sol";
+import { MathLib as MorphoMathLib } from "morpho/libraries/MathLib.sol";
 
-import "../../lib/forge-std/src/Test.sol";
+import "forge-std/Test.sol";
 
 contract ExpLibTest is Test {
   using MathLib for int256;

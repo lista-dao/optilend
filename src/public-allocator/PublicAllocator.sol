@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity 0.8.24;
 
-import { AccessControlUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
-import { UUPSUpgradeable } from "../../lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { FlowCaps, FlowCapsConfig, Withdrawal, MAX_SETTABLE_FLOW_CAP, IPublicAllocatorStaticTyping, IPublicAllocatorBase } from "./interfaces/IPublicAllocator.sol";
-import { Id, IMorpho, IMetaMorpho, MarketAllocation, MarketParams } from "../metamorpho/interfaces/IMetaMorpho.sol";
-import { Market } from "../morpho/interfaces/IMorpho.sol";
+import { Id, IMorpho, IMetaMorpho, MarketAllocation, MarketParams } from "metamorpho/interfaces/IMetaMorpho.sol";
+import { Market } from "morpho/interfaces/IMorpho.sol";
 
 import { ErrorsLib } from "./libraries/ErrorsLib.sol";
 import { EventsLib } from "./libraries/EventsLib.sol";
-import { UtilsLib } from "../morpho/libraries/UtilsLib.sol";
-import { MarketParamsLib } from "../morpho/libraries/MarketParamsLib.sol";
-import { MorphoBalancesLib } from "../morpho/libraries/periphery/MorphoBalancesLib.sol";
+import { UtilsLib } from "morpho/libraries/UtilsLib.sol";
+import { MarketParamsLib } from "morpho/libraries/MarketParamsLib.sol";
+import { MorphoBalancesLib } from "morpho/libraries/periphery/MorphoBalancesLib.sol";
 
 /// @title PublicAllocator
 /// @author Morpho Labs

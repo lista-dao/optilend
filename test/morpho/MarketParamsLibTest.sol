@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import "../../lib/forge-std/src/Test.sol";
+import "forge-std/Test.sol";
 
-import { MarketParamsLib, MarketParams, Id } from "../../src/morpho/libraries/MarketParamsLib.sol";
+import { MarketParamsLib, MarketParams, Id } from "morpho/libraries/MarketParamsLib.sol";
 
 contract MarketParamsLibTest is Test {
   using MarketParamsLib for MarketParams;

@@ -2,27 +2,27 @@
 pragma solidity 0.8.24;
 
 import { MarketConfig, PendingUint192, PendingAddress, MarketAllocation, IMetaMorphoBase, IMetaMorphoStaticTyping } from "./interfaces/IMetaMorpho.sol";
-import { Id, MarketParams, Market, IMorpho } from "../morpho/interfaces/IMorpho.sol";
+import { Id, MarketParams, Market, IMorpho } from "morpho/interfaces/IMorpho.sol";
 
 import { PendingUint192, PendingAddress, PendingLib } from "./libraries/PendingLib.sol";
 import { ConstantsLib } from "./libraries/ConstantsLib.sol";
 import { ErrorsLib } from "./libraries/ErrorsLib.sol";
 import { EventsLib } from "./libraries/EventsLib.sol";
-import { WAD } from "../morpho/libraries/MathLib.sol";
-import { UtilsLib } from "../morpho/libraries/UtilsLib.sol";
-import { SafeCast } from "../../lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
-import { SharesMathLib } from "../morpho/libraries/SharesMathLib.sol";
+import { WAD } from "morpho/libraries/MathLib.sol";
+import { UtilsLib } from "morpho/libraries/UtilsLib.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { SharesMathLib } from "morpho/libraries/SharesMathLib.sol";
 //import { MorphoLib } from "../morpho/libraries/periphery/MorphoLib.sol";
-import { MarketParamsLib } from "../morpho/libraries/MarketParamsLib.sol";
-import { IERC20Metadata } from "../../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { MarketParamsLib } from "morpho/libraries/MarketParamsLib.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 //import { MorphoBalancesLib } from "../morpho/libraries/periphery/MorphoBalancesLib.sol";
 
-import { MulticallUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/utils/MulticallUpgradeable.sol";
-import { ERC20PermitUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
-import { IERC20, IERC4626, ERC20Upgradeable, ERC4626Upgradeable, Math, SafeERC20 } from "../../lib/openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
-import { AccessControlUpgradeable } from "../../lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
-import { UUPSUpgradeable } from "../../lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol";
-import { MorphoBalancesLib } from "../morpho/libraries/periphery/MorphoBalancesLib.sol";
+import { MulticallUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
+import { ERC20PermitUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import { IERC20, IERC4626, ERC20Upgradeable, ERC4626Upgradeable, Math, SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { MorphoBalancesLib } from "morpho/libraries/periphery/MorphoBalancesLib.sol";
 
 /// @title MetaMorpho
 /// @author Morpho Labs

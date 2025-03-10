@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import { MarketParams } from "../../../src/morpho/interfaces/IMorpho.sol";
+import { MarketParams } from "morpho/interfaces/IMorpho.sol";
 import "../BaseTest.sol";
 
 contract GetPriceTest is BaseTest {

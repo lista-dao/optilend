@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import "../../../lib/forge-std/src/Test.sol";
+import "forge-std/Test.sol";
 
-import "../../../src/morpho/libraries/MathLib.sol";
+import "morpho/libraries/MathLib.sol";
 import "../helpers/WadMath.sol";
 
 contract MathLibTest is Test {

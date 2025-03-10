@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import { IMetaMorpho } from "../../src/metamorpho/interfaces/IMetaMorpho.sol";
+import { IMetaMorpho } from "metamorpho/interfaces/IMetaMorpho.sol";
 
-import { ERC1820Registry } from "../../src/metamorpho/mocks/ERC1820Registry.sol";
-import { ERC777Mock, IERC1820Registry } from "../../src/metamorpho/mocks/ERC777Mock.sol";
-import { IERC1820Implementer } from "../../lib/openzeppelin-contracts/contracts/interfaces/IERC1820Implementer.sol";
+import { ERC1820Registry } from "metamorpho/mocks/ERC1820Registry.sol";
+import { ERC777Mock, IERC1820Registry } from "metamorpho/mocks/ERC777Mock.sol";
+import { IERC1820Implementer } from "@openzeppelin/contracts/interfaces/IERC1820Implementer.sol";
 
 import "./helpers/IntegrationTest.sol";
 

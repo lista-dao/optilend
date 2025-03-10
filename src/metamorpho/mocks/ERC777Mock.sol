@@ -3,13 +3,13 @@ pragma solidity ^0.8.0;
 
 pragma solidity ^0.8.0;
 
-import "../../../lib/openzeppelin-contracts/contracts/interfaces/IERC777.sol";
-import "../../../lib/openzeppelin-contracts/contracts/interfaces/IERC777Recipient.sol";
-import "../../../lib/openzeppelin-contracts/contracts/interfaces/IERC777Sender.sol";
-import "../../../lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol";
-import "../../../lib/openzeppelin-contracts/contracts/utils/Address.sol";
-import "../../../lib/openzeppelin-contracts/contracts/utils/Context.sol";
-import "../../../lib/openzeppelin-contracts/contracts/interfaces/IERC1820Registry.sol";
+import "@openzeppelin/contracts/interfaces/IERC777.sol";
+import "@openzeppelin/contracts/interfaces/IERC777Recipient.sol";
+import "@openzeppelin/contracts/interfaces/IERC777Sender.sol";
+import "@openzeppelin/contracts/interfaces/IERC20.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
+import "@openzeppelin/contracts/interfaces/IERC1820Registry.sol";
 
 /**
  * @dev Implementation of the {IERC777} interface.
